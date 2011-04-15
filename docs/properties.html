@@ -29,8 +29,8 @@
             <li><b>OAIHandler.baseURL=[OAI baseURL] (Optional)</b>: Force OAI responses to include the specified baseURL instead of getting it from the HttpServletRequest. This may be necessary if your firewall/router/port-mapper is messing with the request in some way.</li>
           </ul>
           <ul>
-            <li><b>AbstractCatalog.oaiCatalogClassName=[package.classname] (Required)</b>: The fully qualified Java class name that implements ORG.oclc.oai.server.catalog.AbstractCatalog.</li>
-            <li><b>AbstractCatalog.recordFactoryClassName=[package.classname] (Required)</b>: The fully qualified Java class name that implements ORG.oclc.oai.server.catalog.RecordFactory.</li>
+            <li><b>AbstractCatalog.oaiCatalogClassName=[package.classname] (Required)</b>: The fully qualified Java class name that implements org.oclc.oai.server.catalog.AbstractCatalog.</li>
+            <li><b>AbstractCatalog.recordFactoryClassName=[package.classname] (Required)</b>: The fully qualified Java class name that implements org.oclc.oai.server.catalog.RecordFactory.</li>
             <li><b>AbstractCatalog.secondsToLive=[# of seconds] (Optional)</b>: The number of seconds a resumptionToken is retained for reuse. The default is -1, which means that resumptionTokens are stateless and can be resent anytime.</li>
             <li><b>AbstractCatalog.harvestable=[true|false] (Optional)</b>: If present and false, the ListRecords and ListIdentifiers verbs will send back an error condition. This might be useful if you want to provide access to the other verbs but want to discourage general harvesting.</li>
             <li><b>AbstractCatalog.granularity=[YYYY-MM-DD|YYYY-MM-DDThh:mm:ssZ] (Required)</b>: The supported level of datetime granularity for from/until parameters.</li>
@@ -43,10 +43,10 @@
             <li><b>Identify.description.[0-9]*=[xml fragment] (Optional; Repeatable)</b>: XML fragments (&lt;description&gt;) to include in the Identify verb's response.</li>
           </ul>
           <ul>
-            <li><b>Crosswalks.[metadataPrefix]=[package.classname] (Required; Repeatable)</b>: Java class(es) that implement the ORG.oclc.oai.server.crosswalk.Crosswalk class.</li>
+            <li><b>Crosswalks.[metadataPrefix]=[package.classname] (Required; Repeatable)</b>: Java class(es) that implement the org.oclc.oai.server.crosswalk.Crosswalk class.</li>
           </ul>
           <ul>
-            <li><b>ExtensionVerbs.[verb name]=[package.classname] (Optional; Repeatable)</b>: Java class(es) that extend the ORG.oclc.oai.server.verb.ServerVerb class. This allow you to easily create new verbs to perform application functions beyond the set of OAI verbs. These verbs can be accessed by adding &quot;/extension&quot; to the baseURL.</li>
+            <li><b>ExtensionVerbs.[verb name]=[package.classname] (Optional; Repeatable)</b>: Java class(es) that extend the org.oclc.oai.server.verb.ServerVerb class. This allow you to easily create new verbs to perform application functions beyond the set of OAI verbs. These verbs can be accessed by adding &quot;/extension&quot; to the baseURL.</li>
           </ul>
           <ul>
             <li>Other properties that support various combinations of classes mentioned above.</li>

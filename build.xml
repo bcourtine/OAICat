@@ -398,7 +398,7 @@
     <mkdir          dir="${distv.home}/docs/api"/>
     <javadoc sourcepath="src"
                 destdir="${distv.home}/docs/api"
-           packagenames="ORG.oclc.*,edu.*">
+           packagenames="org.oclc.*,edu.*">
       <classpath refid="compile.classpath"/>
     </javadoc>
 
