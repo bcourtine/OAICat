@@ -1,0 +1,12 @@
+h1. Projet OAICat
+
+Ce projet a pour but de fournir une implémentation Open Source d'un moteur d'exposition de données au format OAI-PMH.
+
+h2. Historique
+
+Ce projet est un fork du projet "OAICat":http://www.oclc.org/research/activities/oaicat/default.htm développé par "OCLC":http://www.oclc.org/ dans sa dernière version 1.5.57.
+
+Par rapport au projet original, celui-ci apporte les modifications suivantes :
+* Gestion de configuration basée sur "Git":http://www.git-scm.com/
+* Renommage du package "ORG.oclc" en "org.oclc" pour respecter les conventions java
+* Utilisation de Maven comme gestionnaire de build
