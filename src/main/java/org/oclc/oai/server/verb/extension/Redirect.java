@@ -32,6 +32,8 @@ import org.oclc.oai.server.verb.CannotDisseminateFormatException;
 import org.oclc.oai.server.verb.IdDoesNotExistException;
 import org.oclc.oai.server.verb.OAIInternalServerError;
 import org.oclc.oai.server.verb.ServerVerb;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class represents a Redirect response on either the server or
@@ -40,7 +42,10 @@ import org.oclc.oai.server.verb.ServerVerb;
  * @author Jeffrey A. Young, OCLC Online Computer Library Center
  */
 public class Redirect extends ServerVerb {
-    private static final boolean debug = true;
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(Redirect.class);
+
     private static Transformer transformer;
 
     static {
@@ -84,18 +89,15 @@ public class Redirect extends ServerVerb {
                 + "  </xsl:template>\n"
                 + "</xsl:stylesheet>\n";
         try {
-            if (debug) {
-                System.out.println("Redirect.<init>: xsltString=" + xsltString);
-            }
+            LOGGER.debug("Redirect.<init>: xsltString=" + xsltString);
             StreamSource xslSource = new StreamSource(new StringReader(xsltString));
             TransformerFactory tFactory = TransformerFactory.newInstance();
             transformer = tFactory.newTransformer(xslSource);
         } catch (TransformerException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
         }
     }
 
-    ;
     private static List<String> validParamNames = new ArrayList<String>();
 
     static {
@@ -109,17 +111,12 @@ public class Redirect extends ServerVerb {
      * @param context the servlet context
      * @param request the servlet request
      * @return a String containing the XML response
-     * @throws OAIBadRequestException an http 400 status error occurred
-     * @throws OAINotFoundException an http 404 status error occurred
      * @throws OAIInternalServerError an http 500 status error occurred
      */
-    public static String construct(HashMap context,
-            HttpServletRequest request, HttpServletResponse response,
-            Transformer serverTransformer)
+    public static String construct(HashMap context, HttpServletRequest request, HttpServletResponse response, Transformer serverTransformer)
             throws FileNotFoundException, TransformerException {
         Properties properties = (Properties) context.get("OAIHandler.properties");
-        AbstractCatalog abstractCatalog =
-                (AbstractCatalog) context.get("OAIHandler.catalog");
+        AbstractCatalog abstractCatalog = (AbstractCatalog) context.get("OAIHandler.catalog");
         String baseURL = properties.getProperty("OAIHandler.baseURL");
         if (baseURL == null) {
             try {
@@ -130,66 +127,44 @@ public class Redirect extends ServerVerb {
         }
         StringBuilder sb = new StringBuilder();
         String identifier = request.getParameter("identifier");
-
-        if (debug) {
-            System.out.println("Redirect.construct: identifier=" +
-                    identifier);
-        }
+        LOGGER.debug("Redirect.construct: identifier=" + identifier);
         Crosswalks crosswalks = abstractCatalog.getCrosswalks();
         try {
             if (identifier == null || identifier.length() == 0) {
-                if (debug) {
-                    System.out.println("Bad argument");
-                }
+                LOGGER.warn("Bad argument");
                 throw new BadArgumentException();
             } else if (!crosswalks.containsValue("oai_dc")) {
-                if (debug) {
-                    System.out.println("crosswalk not present: oai_dc");
-                }
+                LOGGER.warn("crosswalk not present: oai_dc");
                 throw new CannotDisseminateFormatException("oai_dc");
             } else {
                 String metadata = abstractCatalog.getRecord(identifier, "oai_dc");
                 if (metadata != null) {
                     sb.append(metadata);
                 } else {
-                    if (debug) {
-                        System.out.println("ID does not exist");
-                    }
+                    LOGGER.warn("ID does not exist");
                     throw new IdDoesNotExistException(identifier);
                 }
             }
         } catch (BadArgumentException e) {
-            if (debug) {
-                e.printStackTrace();
-            }
+            LOGGER.error("An Exception occured", e);
             throw new FileNotFoundException(e.getMessage());
         } catch (CannotDisseminateFormatException e) {
-            if (debug) {
-                e.printStackTrace();
-            }
+            LOGGER.error("An Exception occured", e);
             throw new FileNotFoundException(e.getMessage());
         } catch (IdDoesNotExistException e) {
-            if (debug) {
-                e.printStackTrace();
-            }
+            LOGGER.error("An Exception occured", e);
             throw new FileNotFoundException(e.getMessage());
         } catch (OAIInternalServerError e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             return BadVerb.construct(context, request, response, serverTransformer);
         }
-        if (debug) {
-            System.out.println("Redirect.construct: prerendered sb=" + sb.toString());
-        }
-        if (debug) {
-            System.out.println("Redirect.construct: transformer=" + transformer);
-        }
+        LOGGER.debug("Redirect.construct: prerendered sb=" + sb.toString());
+        LOGGER.debug("Redirect.construct: transformer=" + transformer);
         synchronized (transformer) {
             transformer.setParameter("base.url", baseURL);
             String out = render(response, (String) null, sb.toString(), transformer);
             transformer.clearParameters();
-            if (debug) {
-                System.out.println("Redirect.construct: out=" + out);
-            }
+            LOGGER.debug("Redirect.construct: out=" + out);
             return out;
         }
     }

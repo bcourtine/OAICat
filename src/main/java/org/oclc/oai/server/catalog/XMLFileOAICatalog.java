@@ -10,27 +10,11 @@
  */
 package org.oclc.oai.server.catalog;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Properties;
-import java.util.SortedMap;
-import java.util.StringTokenizer;
-import java.util.TreeMap;
-import java.util.List;
+import org.oclc.oai.server.catalog.helpers.RecordStringHandler;
+import org.oclc.oai.server.verb.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
@@ -41,17 +25,8 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
-
-import org.xml.sax.SAXException;
-
-import org.oclc.oai.server.catalog.helpers.RecordStringHandler;
-import org.oclc.oai.server.verb.BadResumptionTokenException;
-import org.oclc.oai.server.verb.CannotDisseminateFormatException;
-import org.oclc.oai.server.verb.IdDoesNotExistException;
-import org.oclc.oai.server.verb.NoItemsMatchException;
-import org.oclc.oai.server.verb.NoMetadataFormatsException;
-import org.oclc.oai.server.verb.NoSetHierarchyException;
-import org.oclc.oai.server.verb.OAIInternalServerError;
+import java.io.*;
+import java.util.*;
 
 
 /**
@@ -62,7 +37,9 @@ import org.oclc.oai.server.verb.OAIInternalServerError;
  */
 
 public class XMLFileOAICatalog extends AbstractCatalog {
-    private static boolean debug = false;
+    
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(XMLFileOAICatalog.class);
 
     private Map<String, Object> nativeMap = null;
     private Map<String, Object> resumptionResults = new HashMap<String, Object>();
@@ -73,13 +50,7 @@ public class XMLFileOAICatalog extends AbstractCatalog {
 
     public XMLFileOAICatalog(Properties properties) throws IOException {
         try {
-            String temp;
-
-            temp = properties.getProperty("XMLFileOAICatalog.debug");
-            if ("true".equals(temp)) {
-                debug = true;
-            }
-            temp = properties.getProperty("XMLFileOAICatalog.schemaLocationIndexed");
+            String temp = properties.getProperty("XMLFileOAICatalog.schemaLocationIndexed");
             if ("true".equals(temp)) {
                 schemaLocationIndexed = true;
             }
@@ -88,17 +59,13 @@ public class XMLFileOAICatalog extends AbstractCatalog {
                 throw new IllegalArgumentException("XMLFileOAICatalog. maxListSize is missing from the properties file");
             }
             maxListSize = Integer.parseInt(temp);
-            if (debug) {
-                System.out.println("in XMLFileOAICatalog(): maxListSize=" + maxListSize);
-            }
+            LOGGER.debug("in XMLFileOAICatalog(): maxListSize=" + maxListSize);
 
             String sourceFile = properties.getProperty("XMLFileOAICatalog.sourceFile");
             if (sourceFile == null) {
                 throw new IllegalArgumentException("XMLFileOAICatalog. sourceFile is missing from the properties file");
             }
-            if (debug) {
-                System.out.println("in XMLFileOAICatalog(): sourceFile=" + sourceFile);
-            }
+            LOGGER.debug("in XMLFileOAICatalog(): sourceFile=" + sourceFile);
             String getMetadataXSLTName = properties.getProperty("XMLFileOAICatalog.getMetadataXSLTName");
             if (getMetadataXSLTName != null) {
                 try {
@@ -112,7 +79,7 @@ public class XMLFileOAICatalog extends AbstractCatalog {
                     TransformerFactory tFactory = TransformerFactory.newInstance();
                     getMetadataTransformer = tFactory.newTransformer(xslSource);
                 } catch (TransformerConfigurationException e) {
-                    e.printStackTrace();
+                    LOGGER.error("An Exception occured", e);
                     throw new IOException(e.getMessage());
                 }
             }
@@ -133,10 +100,10 @@ public class XMLFileOAICatalog extends AbstractCatalog {
             // build the indexes
             nativeMap = rsh.getNativeRecords();
         } catch (SAXException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new IOException(e.getMessage());
         } catch (ParserConfigurationException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new IOException(e.getMessage());
         }
         sets = getSets(properties);
@@ -161,8 +128,7 @@ public class XMLFileOAICatalog extends AbstractCatalog {
      * @param oaiIdentifier the OAI identifier
      * @param metadataPrefix the OAI metadataPrefix
      * @return the Record object containing the result.
-     * @throws CannotDisseminateFormatException signals an http status
-     * code 400 problem
+     * @throws CannotDisseminateFormatException signals an http status code 400 problem
      * @throws IdDoesNotExistException signals an http status code 404 problem
      * @throws OAIInternalServerError signals an http status code 500 problem
      */
@@ -172,9 +138,7 @@ public class XMLFileOAICatalog extends AbstractCatalog {
         if (schemaLocationIndexed) {
             recordid = recordid + "/" + metadataPrefix;
         }
-        if (debug) {
-            System.out.println("XMLFileOAICatalog.getRecord: recordid=" + recordid);
-        }
+        LOGGER.debug("XMLFileOAICatalog.getRecord: recordid=" + recordid);
         Object nativeRecord = nativeMap.get(recordid.toLowerCase());
         if (nativeRecord == null) {
             throw new IdDoesNotExistException(oaiIdentifier);
@@ -189,19 +153,14 @@ public class XMLFileOAICatalog extends AbstractCatalog {
         if (schemaLocationIndexed) {
             recordid = recordid + "/" + metadataPrefix;
         }
-        if (debug) {
-            System.out.println("XMLFileOAICatalog.getRecord: recordid=" + recordid);
-        }
+        LOGGER.debug("XMLFileOAICatalog.getRecord: recordid=" + recordid);
         Map<String, Object> nativeRecord = (Map<String, Object>) nativeMap.get(recordid.toLowerCase());
         if (nativeRecord == null) {
             throw new IdDoesNotExistException(oaiIdentifier);
         }
-        if (debug) {
-            Iterator keys = nativeRecord.keySet().iterator();
-            while (keys.hasNext()) {
-                System.out.println(keys.next());
-            }
-        }
+
+        LOGGER.debug(nativeRecord.keySet().toString());
+
         String result = (String) nativeRecord.get("recordString");
         if (getMetadataTransformer != null) {
             StringReader stringReader = new StringReader(result);
@@ -212,7 +171,7 @@ public class XMLFileOAICatalog extends AbstractCatalog {
                     getMetadataTransformer.transform(streamSource, new StreamResult(stringWriter));
                 }
             } catch (TransformerException e) {
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new OAIInternalServerError(e.getMessage());
             }
             result = stringWriter.toString();
@@ -257,19 +216,14 @@ public class XMLFileOAICatalog extends AbstractCatalog {
     /**
      * Retrieve a list of Identifiers that satisfy the criteria parameters
      *
-     * @param from beginning date in the form of YYYY-MM-DD or null if earliest
-     * date is desired
-     * @param until ending date in the form of YYYY-MM-DD or null if latest
-     * date is desired
+     * @param from beginning date in the form of YYYY-MM-DD or null if earliest date is desired
+     * @param until ending date in the form of YYYY-MM-DD or null if latest date is desired
      * @param set set name or null if no set is desired
-     * @return a Map object containing an optional "resumptionToken" key/value
-     *         pair and an "identifiers" Map object. The "identifiers" Map contains OAI
-     *         identifier keys with corresponding values of "true" or null depending on
+     * @return a Map object containing an optional "resumptionToken" key/value pair and an "identifiers" Map object.
+     *         The "identifiers" Map contains OAI identifier keys with corresponding values of "true" or null depending on
      *         whether the identifier is deleted or not.
-     * problem
      */
-    public Map listIdentifiers(String from, String until, String set, String metadataPrefix)
-            throws NoItemsMatchException {
+    public Map<String, Object> listIdentifiers(String from, String until, String set, String metadataPrefix) throws NoItemsMatchException {
         purge(); // clean out old resumptionTokens
         Map<String, Object> listIdentifiersMap = new HashMap<String, Object>();
         List<String> headers = new ArrayList<String>();
@@ -283,8 +237,7 @@ public class XMLFileOAICatalog extends AbstractCatalog {
             String recordDate = getRecordFactory().getDatestamp(nativeRecord);
             String schemaLocation = (String) nativeRecord.get("schemaLocation");
             List setSpecs = (List) nativeRecord.get("setSpecs");
-            if (recordDate.compareTo(from) >= 0
-                    && recordDate.compareTo(until) <= 0
+            if (recordDate.compareTo(from) >= 0 && recordDate.compareTo(until) <= 0
                     && (!schemaLocationIndexed || schemaLocation.equals(getCrosswalks().getSchemaLocation(metadataPrefix)))
                     && (set == null || setSpecs.contains(set))) {
                 String[] header = getRecordFactory().createHeader(nativeRecord);
@@ -365,7 +318,7 @@ public class XMLFileOAICatalog extends AbstractCatalog {
         /* Get some more records from your database */
         Iterator iterator = (Iterator) resumptionResults.remove(resumptionId);
         if (iterator == null) {
-            System.out.println("XMLFileOAICatalog.listIdentifiers: reuse of old resumptionToken?");
+            LOGGER.debug("XMLFileOAICatalog.listIdentifiers: reuse of old resumptionToken?");
             iterator = nativeMap.entrySet().iterator();
             for (int i = 0; i < oldCount; ++i) {
                 iterator.next();
@@ -429,9 +382,7 @@ public class XMLFileOAICatalog extends AbstractCatalog {
         Iterator abouts = getAbouts(nativeRecord);
 
         if (metadataPrefix != null) {
-            if (debug) {
-                System.out.println(getCrosswalks());
-            }
+            LOGGER.debug(getCrosswalks().toString());
             if ((schemaURL = getCrosswalks().getSchemaURL(metadataPrefix)) == null) {
                 throw new CannotDisseminateFormatException(metadataPrefix);
             }
@@ -445,12 +396,11 @@ public class XMLFileOAICatalog extends AbstractCatalog {
      * @param nativeRecord Record containing the nativeRecord
      * @return an Iterator containing the list of setSpec values for this nativeRecord
      */
-    private Iterator getSetSpecs(Object nativeRecord)
-            throws OAIInternalServerError {
+    private Iterator getSetSpecs(Object nativeRecord) throws OAIInternalServerError {
         try {
             return getRecordFactory().getSetSpecs(nativeRecord);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }
@@ -468,48 +418,40 @@ public class XMLFileOAICatalog extends AbstractCatalog {
     /**
      * Retrieve a list of records that satisfy the specified criteria
      *
-     * @param from beginning date in the form of YYYY-MM-DD or null if earliest
-     * date is desired
-     * @param until ending date in the form of YYYY-MM-DD or null if latest
-     * date is desired
+     * @param from beginning date in the form of YYYY-MM-DD or null if earliest date is desired
+     * @param until ending date in the form of YYYY-MM-DD or null if latest date is desired
      * @param set set name or null if no set is desired
      * @param metadataPrefix the OAI metadataPrefix
-     * @return a Map object containing an optional "resumptionToken" key/value
-     *         pair and a "records" Iterator object. The "records" Iterator contains a
-     *         set of Records objects.
+     * @return a Map object containing an optional "resumptionToken" key/value pair and a "records" Iterator object.
+     *         The "records" Iterator contains a set of Records objects.
      * @throws OAIInternalServerError signals an http status code 500 problem
      */
-    public Map listRecords(String from, String until, String set, String metadataPrefix)
+    public Map<String, Object> listRecords(String from, String until, String set, String metadataPrefix)
             throws CannotDisseminateFormatException, OAIInternalServerError, NoItemsMatchException {
         String requestedSchemaLocation = getCrosswalks().getSchemaLocation(metadataPrefix);
         purge(); // clean out old resumptionTokens
         Map<String, Object> listRecordsMap = new HashMap<String, Object>();
-        LinkedList records = new LinkedList();
+        List<String> records = new LinkedList<String>();
         Iterator iterator = nativeMap.entrySet().iterator();
         int numRows = nativeMap.entrySet().size();
-        if (debug) {
-            System.out.println("XMLFileOAICatalog.listRecords: numRows=" + numRows);
-        }
+        LOGGER.debug("XMLFileOAICatalog.listRecords: numRows=" + numRows);
         int count = 0;
         while (count < maxListSize && iterator.hasNext()) {
             Map.Entry entryNativeMap = (Map.Entry) iterator.next();
             Map<String, Object> nativeRecord = (HashMap) entryNativeMap.getValue();
             String recordDate = getRecordFactory().getDatestamp(nativeRecord);
             String schemaLocation = (String) nativeRecord.get("schemaLocation");
-            List setSpecs = (List) nativeRecord.get("setSpecs");
-            if (debug) {
-                System.out.println("XMLFileOAICatalog.listRecord: recordDate=" + recordDate);
-                System.out.println("XMLFileOAICatalog.listRecord: requestedSchemaLocation=" + requestedSchemaLocation);
-                System.out.println("XMLFileOAICatalog.listRecord: schemaLocation=" + schemaLocation);
-            }
-            if (recordDate.compareTo(from) >= 0
-                    && recordDate.compareTo(until) <= 0
+            List<String> setSpecs = (List<String>) nativeRecord.get("setSpecs");
+            
+            LOGGER.debug("XMLFileOAICatalog.listRecord: recordDate=" + recordDate);
+            LOGGER.debug("XMLFileOAICatalog.listRecord: requestedSchemaLocation=" + requestedSchemaLocation);
+            LOGGER.debug("XMLFileOAICatalog.listRecord: schemaLocation=" + schemaLocation);
+
+            if (recordDate.compareTo(from) >= 0 && recordDate.compareTo(until) <= 0
                     && (!schemaLocationIndexed || requestedSchemaLocation.equals(schemaLocation))
                     && (set == null || setSpecs.contains(set))) {
                 String record = constructRecord(nativeRecord, metadataPrefix);
-                if (debug) {
-                    System.out.println("XMLFileOAICatalog.listRecords: record=" + record);
-                }
+                LOGGER.debug("XMLFileOAICatalog.listRecords: record=" + record);
                 records.add(record);
                 count++;
             }
@@ -584,7 +526,7 @@ public class XMLFileOAICatalog extends AbstractCatalog {
         /* Get some more records from your database */
         Iterator iterator = (Iterator) resumptionResults.remove(resumptionId);
         if (iterator == null) {
-            System.out.println("XMLFileOAICatalog.listRecords: reuse of old resumptionToken?");
+            LOGGER.debug("XMLFileOAICatalog.listRecords: reuse of old resumptionToken?");
             iterator = nativeMap.entrySet().iterator();
             for (int i = 0; i < oldCount; ++i) {
                 iterator.next();

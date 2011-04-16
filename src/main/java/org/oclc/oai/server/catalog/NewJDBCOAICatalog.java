@@ -28,6 +28,8 @@ import org.oclc.oai.server.verb.NoMetadataFormatsException;
 import org.oclc.oai.server.verb.NoSetHierarchyException;
 import org.oclc.oai.server.verb.OAIInternalServerError;
 import org.oclc.oai.util.OAIUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * NewJDBCOAICatalog is like JDBCOAICatalog except it is more intelligent
@@ -37,6 +39,10 @@ import org.oclc.oai.util.OAIUtil;
  * @deprecated Use ExtendedJDBCOAICatalog instead
  */
 public class NewJDBCOAICatalog extends AbstractCatalog {
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(NewJDBCOAICatalog.class);
+
     /**
      * The StatementResultSet inner class is used because Statement objects
      * and ResultSet objects are tightly coupled and need to persist across
@@ -45,6 +51,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
      * @author Jeffrey A. Young
      */
     private class StatementResultSet {
+
         private Statement stmt = null;
         private ResultSet rs = null;
 
@@ -86,9 +93,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
             for (int i = 1; i <= count; ++i) {
                 String fieldName = new StringBuilder().append(mdata.getTableName(i)).append(".").append(mdata.getColumnName(i)).toString();
                 nativeItem.put(fieldName, rs.getObject(i));
-                if (debug) {
-                    System.out.println(fieldName + "=" + nativeItem.get(fieldName));
-                }
+                LOGGER.debug(fieldName + "=" + nativeItem.get(fieldName));
             }
             return nativeItem;
         }
@@ -116,8 +121,6 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
 
     /** The JDBC Connection */
     private Connection persistentConnection = null;
-
-    private static final boolean debug = false;
 
     /**
      * SQL identifier query (loaded from properties)
@@ -304,7 +307,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
                 return getRecordFactory().getSchemaLocations(nativeItem);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } finally {
             try {
@@ -312,7 +315,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
                     stmtRs.close();
                 }
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new OAIInternalServerError(e.getMessage());
             }
         }
@@ -359,9 +362,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
             }
             sb.append(token.substring(1));
         }
-        if (debug) {
-            System.out.println(sb.toString());
-        }
+        LOGGER.debug(sb.toString());
         return sb.toString();
     }
 
@@ -390,9 +391,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
             sb.append(date.substring(8));
             sb.append("/");
             sb.append(date.substring(0, 4));
-            if (debug) {
-                System.out.println("JDBCOAICatalog.formatDate: from " + date + " to " + sb.toString());
-            }
+            LOGGER.debug("JDBCOAICatalog.formatDate: from " + date + " to " + sb.toString());
             return sb.toString();
         }
     }
@@ -427,9 +426,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
             }
             sb.append(token.substring(1));
         }
-        if (debug) {
-            System.out.println(sb.toString());
-        }
+        LOGGER.debug(sb.toString());
         return sb.toString();
     }
 
@@ -463,9 +460,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
             }
             sb.append(token.substring(1));
         }
-        if (debug) {
-            System.out.println(sb.toString());
-        }
+        LOGGER.debug(sb.toString());
         return sb.toString();
     }
 
@@ -499,9 +494,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
             }
             sb.append(token.substring(1));
         }
-        if (debug) {
-            System.out.println(sb.toString());
-        }
+        LOGGER.debug(sb.toString());
         return sb.toString();
     }
 
@@ -589,7 +582,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
                     e1.printStackTrace();
                 }
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
@@ -687,7 +680,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
                     e1.printStackTrace();
                 }
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
@@ -717,7 +710,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
             Map<String, Object> nativeItem = stmtRs.getColumnValues();
             return constructRecord(nativeItem, metadataPrefix);
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } finally {
             try {
@@ -725,7 +718,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
                     stmtRs.close();
                 }
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new OAIInternalServerError(e.getMessage());
             }
         }
@@ -810,7 +803,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
                     e1.printStackTrace();
                 }
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
@@ -910,7 +903,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
                     e1.printStackTrace();
                 }
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
@@ -963,9 +956,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
             List<String> sets = new ArrayList<String>();
 
             try {
-                if (debug) {
-                    System.out.println(setQuery);
-                }
+                LOGGER.debug(setQuery);
 
                 /* Get some records from your database */
                 stmtRs = new StatementResultSet(setQuery);
@@ -979,9 +970,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
                     /* Use the RecordFactory to extract header/set pairs for each item */
                     Map<String, Object> nativeItem = stmtRs.getColumnValues();
                     sets.add(getSetXML(nativeItem));
-                    if (debug) {
-                        System.out.println("JDBCOAICatalog.listSets: adding an entry");
-                    }
+                    LOGGER.debug("JDBCOAICatalog.listSets: adding an entry");
                 }
 
                 /* decide if you're done */
@@ -1023,7 +1012,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
                         e1.printStackTrace();
                     }
                 }
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new OAIInternalServerError(e.getMessage());
             }
 
@@ -1119,7 +1108,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
                         e1.printStackTrace();
                     }
                 }
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new OAIInternalServerError(e.getMessage());
             }
 
@@ -1149,13 +1138,13 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
             }
             return setSpecs.iterator();
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } finally {
             try {
                 stmtRs.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new OAIInternalServerError(e.getMessage());
             }
         }
@@ -1182,13 +1171,13 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
             }
             return abouts.iterator();
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } finally {
             try {
                 stmtRs.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new OAIInternalServerError(e.getMessage());
             }
         }
@@ -1270,7 +1259,7 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
     private Connection getConnection() throws SQLException {
         if (persistentConnection != null) {
             if (persistentConnection.isClosed()) {
-                System.out.println("Persistent connection has expired.");
+                LOGGER.debug("Persistent connection has expired.");
                 persistentConnection = getNewConnection();
             }
         } else {
@@ -1287,17 +1276,13 @@ public class NewJDBCOAICatalog extends AbstractCatalog {
     private void purge() {
         List<String> old = new ArrayList<String>();
         Date now = new Date();
-        Iterator keySet = resumptionResults.keySet().iterator();
-        while (keySet.hasNext()) {
-            String key = (String) keySet.next();
+        for (String key : resumptionResults.keySet()) {
             Date then = new Date(Long.parseLong(key) + getMillisecondsToLive());
             if (now.after(then)) {
                 old.add(key);
             }
         }
-        Iterator iterator = old.iterator();
-        while (iterator.hasNext()) {
-            String key = (String) iterator.next();
+        for (String key : old) {
             resumptionResults.remove(key);
         }
     }

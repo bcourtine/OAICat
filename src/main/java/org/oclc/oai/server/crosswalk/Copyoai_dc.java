@@ -19,6 +19,8 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamSource;
 
 import org.oclc.oai.server.verb.OAIInternalServerError;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Convert native "item" to oai_dc. In this case, the native "item"
@@ -28,23 +30,22 @@ import org.oclc.oai.server.verb.OAIInternalServerError;
  * involves pulling out the one that is requested.
  */
 public class Copyoai_dc extends XSLTCrosswalk {
-    private boolean debug=false;
-//     private Transformer transformer = null;
-    
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(Copyoai_dc.class);
+
     /**
      * The constructor assigns the schemaLocation associated with this crosswalk. Since
      * the crosswalk is trivial in this case, no properties are utilized.
      *
      * @param properties properties that are needed to configure the crosswalk.
      */
-    public Copyoai_dc(Properties properties)
-        throws OAIInternalServerError {
- 	super(properties, "http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd", (String)null);
+    public Copyoai_dc(Properties properties) throws OAIInternalServerError {
+        super(properties, "http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd", (String) null);
         try {
             String xsltName = properties.getProperty("Copyoai_dc.xsltName");
             String classpathXSL = properties.getProperty("Copyoai_dc.classpathXSL");
-            if (debug) System.out.println("Copyoai_dc.Copyoai_dc: xsltName="
-                                          + xsltName);
+            LOGGER.debug("Copyoai_dc.Copyoai_dc: xsltName=" + xsltName);
             if (xsltName != null) {
                 StreamSource xslSource = new StreamSource(new FileInputStream(xsltName));
                 TransformerFactory tFactory = TransformerFactory.newInstance();
@@ -56,18 +57,19 @@ public class Copyoai_dc extends XSLTCrosswalk {
                 this.transformer = tFactory.newTransformer(xslSource);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }
-    
+
     /**
      * Can this nativeItem be represented in DC format?
+     *
      * @param nativeItem a record in native format
      * @return true if DC format is possible, false otherwise.
      */
     public boolean isAvailableFor(Object nativeItem) {
-        ArrayList list = (ArrayList)nativeItem;
+        ArrayList list = (ArrayList) nativeItem;
         return list.contains("oai_dc");
     }
 }

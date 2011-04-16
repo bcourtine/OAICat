@@ -17,6 +17,8 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamSource;
 
 import org.oclc.oai.server.verb.OAIInternalServerError;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Convert native "item" to pro. In this case, the native "item"
@@ -26,7 +28,9 @@ import org.oclc.oai.server.verb.OAIInternalServerError;
  * involves pulling out the one that is requested.
  */
 public class XSLTpro2004Crosswalk extends XSLTCrosswalk {
-//    private Transformer transformer = null;
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(XSLTpro2004Crosswalk.class);
     
     /**
      * The constructor assigns the schemaLocation associated with this crosswalk. Since
@@ -34,8 +38,7 @@ public class XSLTpro2004Crosswalk extends XSLTCrosswalk {
      *
      * @param properties properties that are needed to configure the crosswalk.
      */
-    public XSLTpro2004Crosswalk(Properties properties)
-        throws OAIInternalServerError {
+    public XSLTpro2004Crosswalk(Properties properties) throws OAIInternalServerError {
  	super(properties, "info:ofi/pro-2004 http://www.openurl.info/registry/docs/xsd/info:ofi/fmt:xml:xsd:pro-2004", null);
         try {
             String xsltName = properties.getProperty("XSLTproCrosswalk.xsltName");
@@ -45,7 +48,7 @@ public class XSLTpro2004Crosswalk extends XSLTCrosswalk {
                 this.transformer = tFactory.newTransformer(xslSource);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }

@@ -20,6 +20,8 @@ import org.oclc.oai.server.crosswalk.Crosswalks;
 import org.oclc.oai.server.verb.CannotDisseminateFormatException;
 import org.oclc.oai.server.verb.NoMetadataFormatsException;
 import org.oclc.oai.util.OAIUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * RecordFactory is responsible for pulling various pieces of information from native records
@@ -28,23 +30,23 @@ import org.oclc.oai.util.OAIUtil;
  * native records.
  */
 public abstract class RecordFactory {
-    public static final boolean debug = false;
+    
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(RecordFactory.class);
 
     /** Container for the crosswalk(s) supported by this factory */
     private Crosswalks crosswalks;
 
     /**
-     * Construct a RecordFactory capable of producing the Crosswalk(s)
-     * specified in the properties file.
+     * Construct a RecordFactory capable of producing the Crosswalk(s) specified in the properties file.
      *
-     * @param properties Contains information to configure the factory;
-     * specifically, the names of crosswalk(s) supported
+     * @param properties Contains information to configure the factory; specifically, the names of crosswalk(s) supported
      */
     public RecordFactory(Properties properties) {
         crosswalks = new Crosswalks(properties);
     }
 
-    public RecordFactory(Map<String, Object> crosswalkMap) {
+    public RecordFactory(Map<String, CrosswalkItem> crosswalkMap) {
         crosswalks = new Crosswalks(crosswalkMap);
     }
 
@@ -70,8 +72,7 @@ public abstract class RecordFactory {
      *
      * @param nativeItem native database record
      * @return A List<String> containing all the schemaLocations this record can support.
-     * @throws NoMetadataFormatsException This record doesn't support any of the
-     * available schemaLocations for this repository.
+     * @throws NoMetadataFormatsException This record doesn't support any of the available schemaLocations for this repository.
      */
     public List<String> getSchemaLocations(Object nativeItem) throws NoMetadataFormatsException {
         if (isDeleted(nativeItem)) {
@@ -91,8 +92,7 @@ public abstract class RecordFactory {
     }
 
     /**
-     * Convert a native "item" to a "record" String. Use this version of createHeader
-     * if the setSpecs are derived from the nativeItem itself.
+     * Convert a native "item" to a "record" String. Use this version of createHeader if the setSpecs are derived from the nativeItem itself.
      *
      * @param nativeItem the native record.
      * @return String[0] = "header" XML string String[1] = oai-identifier.
@@ -103,8 +103,7 @@ public abstract class RecordFactory {
     }
 
     /**
-     * Convert a native "item" to a "record" String. Use this version of createHeader
-     * if the setSpecs are supplied from a source other than the nativeItem itself.
+     * Convert a native "item" to a "record" String. Use this version of createHeader if the setSpecs are supplied from a source other than the nativeItem itself.
      *
      * @param nativeItem the native record.
      * @param setSpecs a setSpec iterator
@@ -125,7 +124,7 @@ public abstract class RecordFactory {
      *
      * @param identifier the OAI identifier
      * @param datestamp the datestamp
-     * @param setSpecs
+     * @param setSpecs a setSpec iterator
      * @param isDeleted a flag indicating the status of the record.
      * @return String[0] = "header" XML string String[1] = oai-identifier.
      * @throws IllegalArgumentException One of the header components for this record is bad.
@@ -233,9 +232,8 @@ public abstract class RecordFactory {
     public String create(Object nativeItem, String schemaURL, String metadataPrefix, String identifier,
             String datestamp, Iterator setSpecs, Iterator abouts, boolean isDeleted)
             throws IllegalArgumentException, CannotDisseminateFormatException {
-        if (debug) {
-            System.out.println("RecordFactory.create");
-        }
+        
+        LOGGER.debug("RecordFactory.create");
         StringBuilder xmlRec = new StringBuilder();
         xmlRec.append("<record><header");
         if (isDeleted) {
@@ -254,13 +252,11 @@ public abstract class RecordFactory {
             }
         }
         xmlRec.append("</header>");
-        if (debug) {
-            System.out.println("RecordFactory.create: header finished");
-        }
+        
+        LOGGER.debug("RecordFactory.create: header finished");
+
         if (!isDeleted) {
-            if (debug) {
-                System.out.println("RecordFactory.create: starting metadata");
-            }
+            LOGGER.debug("RecordFactory.create: starting metadata");
             xmlRec.append("<metadata>");
             Iterator iterator = getCrosswalks().iterator();
             while (iterator.hasNext()) {
@@ -268,20 +264,16 @@ public abstract class RecordFactory {
                 String itemPrefix = (String) entry.getKey();
                 CrosswalkItem crosswalkItem = (CrosswalkItem) entry.getValue();
                 Crosswalk crosswalk = crosswalkItem.getCrosswalk();
-                if (debug) {
-                    System.out.println("RecordFactory.create: crosswalk=" + crosswalk);
-                }
-                if (schemaURL == null
-                        || (metadataPrefix == null && crosswalk.getSchemaURL().equals(schemaURL))
+                LOGGER.debug("RecordFactory.create: crosswalk=" + crosswalk);
+                if (schemaURL == null || (metadataPrefix == null && crosswalk.getSchemaURL().equals(schemaURL))
                         || (metadataPrefix != null && itemPrefix.equals(metadataPrefix))) {
                     xmlRec.append(crosswalk.createMetadata(nativeItem));
                     break;
                 }
             }
             xmlRec.append("</metadata>");
-            if (debug) {
-                System.out.println("RecordFactory.create: finished metadata");
-            }
+            LOGGER.debug("RecordFactory.create: finished metadata");
+
             if (abouts != null) {
                 while (abouts.hasNext()) {
                     xmlRec.append("<about>");
@@ -291,9 +283,8 @@ public abstract class RecordFactory {
             }
         }
         xmlRec.append("</record>");
-        if (debug) {
-            System.out.println("RecordFactory.create: return=" + xmlRec.toString());
-        }
+        LOGGER.debug("RecordFactory.create: return=" + xmlRec.toString());
+
         return xmlRec.toString();
     }
 
@@ -325,11 +316,9 @@ public abstract class RecordFactory {
      * @param abouts
      * @return a String containing the OAI record response.
      * @throws IllegalArgumentException One of the header components for this record is bad.
-     * @throws CannotDisseminateFormatException
-     * @throws This nativeItem doesn't support the specified metadataPrefix
+     * @throws CannotDisseminateFormatException nativeItem doesn't support the specified metadataPrefix
      */
-    public String createMetadata(Object nativeItem, String schemaURL, String metadataPrefix,
-            Iterator setSpecs, Iterator abouts)
+    public String createMetadata(Object nativeItem, String schemaURL, String metadataPrefix, Iterator setSpecs, Iterator abouts)
             throws IllegalArgumentException, CannotDisseminateFormatException {
         if (isDeleted(nativeItem)) {
             throw new CannotDisseminateFormatException("Record is deleted.");
@@ -359,10 +348,8 @@ public abstract class RecordFactory {
      * @param metadataPrefix
      * @return a String containing the OAI record response.
      * @throws IllegalArgumentException One of the header components for this record is bad.
-     * @throws This nativeItem doesn't support the specified metadataPrefix
      */
-    public String quickCreateMetadata(Object nativeItem, String schemaURL, String metadataPrefix)
-            throws IllegalArgumentException {
+    public String quickCreateMetadata(Object nativeItem, String schemaURL, String metadataPrefix) throws IllegalArgumentException {
         return null;
     }
 
@@ -370,15 +357,12 @@ public abstract class RecordFactory {
      * Convert a native "item" to a "record" object.
      *
      * @param nativeItem native "Item"
-     * @param schemaURL the schemaURL of the desired metadataFormat
-     * or NULL for a Record object containing all
-     * the supported Crosswalk(s)
+     * @param schemaURL the schemaURL of the desired metadataFormat or NULL for a Record object containing all the supported Crosswalk(s)
      * @return "record" String
      * @throws IllegalArgumentException One of the header components for this record is bad.
-     * @throws This nativeItem doesn't support the specified metadataPrefix
+     * @throws CannotDisseminateFormatException This nativeItem doesn't support the specified metadataPrefix
      */
-    public String createMetadata(Object nativeItem, String schemaURL, boolean isDeleted)
-            throws IllegalArgumentException, CannotDisseminateFormatException {
+    public String createMetadata(Object nativeItem, String schemaURL, boolean isDeleted) throws IllegalArgumentException, CannotDisseminateFormatException {
         StringBuilder xmlRec = new StringBuilder();
         if (isDeleted) {
             throw new CannotDisseminateFormatException("Record is deleted");

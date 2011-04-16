@@ -10,6 +10,9 @@
  */
 package org.oclc.oai.server.crosswalk;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.lang.reflect.Constructor;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -26,7 +29,9 @@ import java.util.StringTokenizer;
  * @author Jeffrey A. Young
  */
 public class Crosswalks {
-    private static final boolean debug = false;
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(Crosswalks.class);
 
     // map of metadataPrefix/CrosswalkItem
     private Map<String, CrosswalkItem> crosswalksMap = new HashMap<String, CrosswalkItem>();
@@ -57,31 +62,25 @@ public class Crosswalks {
                     }
                     CrosswalkItem crosswalkItem = new CrosswalkItem(schemaLabel, crosswalk.getSchemaURL(), crosswalk.getNamespaceURL(), crosswalk);
                     crosswalksMap.put(schemaLabel, crosswalkItem);
-                    if (debug) {
-                        System.out.println("Crosswalks.Crosswalks: " + schemaLabel + "=" + crosswalk);
-                    }
+                    LOGGER.debug("Crosswalks.Crosswalks: " + schemaLabel + "=" + crosswalk);
                 } catch (Exception e) {
-                    System.err.println("Crosswalks: couldn't construct: " + formatClassName);
-                    e.printStackTrace();
+                    LOGGER.error("Crosswalks: couldn't construct: " + formatClassName, e);
                 }
             }
         }
         if (crosswalksMap.size() == 0) {
-            System.err.println("Crosswalks entries are missing from properties file");
+            LOGGER.error("Crosswalks entries are missing from properties file");
         }
     }
 
-    public Crosswalks(Map crosswalkItemMap) {
-        Iterator iter = crosswalkItemMap.values().iterator();
-        while (iter.hasNext()) {
-            CrosswalkItem crosswalkItem = (CrosswalkItem) iter.next();
+    public Crosswalks(Map<String, CrosswalkItem> crosswalkItemMap) {
+        for (CrosswalkItem crosswalkItem : crosswalkItemMap.values()) {
             String schemaLabel = crosswalkItem.getMetadataPrefix();
-// 	    Crosswalk crosswalk = crosswalkItem.getCrosswalk();
             crosswalksMap.put(schemaLabel, crosswalkItem);
         }
 
         if (crosswalksMap.size() == 0) {
-            System.err.println("Crosswalks entries are missing from properties file");
+            LOGGER.error("Crosswalks entries are missing from properties file");
         }
     }
 

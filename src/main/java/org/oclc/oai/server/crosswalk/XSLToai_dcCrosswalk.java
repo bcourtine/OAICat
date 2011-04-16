@@ -17,6 +17,8 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamSource;
 
 import org.oclc.oai.server.verb.OAIInternalServerError;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Convert native "item" to oai_dc. In this case, the native "item"
@@ -26,8 +28,9 @@ import org.oclc.oai.server.verb.OAIInternalServerError;
  * involves pulling out the one that is requested.
  */
 public class XSLToai_dcCrosswalk extends XSLTCrosswalk {
-    private boolean debug=false;
-//     private Transformer transformer = null;
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(XSLToai_dcCrosswalk.class);
     
     /**
      * The constructor assigns the schemaLocation associated with this crosswalk. Since
@@ -35,20 +38,18 @@ public class XSLToai_dcCrosswalk extends XSLTCrosswalk {
      *
      * @param properties properties that are needed to configure the crosswalk.
      */
-    public XSLToai_dcCrosswalk(Properties properties)
-        throws OAIInternalServerError {
+    public XSLToai_dcCrosswalk(Properties properties) throws OAIInternalServerError {
  	super(properties, "http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd", (String)null);
         try {
             String xsltName = properties.getProperty("XSLToai_dcCrosswalk.xsltName");
-            if (debug) System.out.println("XSLToai_dcCrosswalk.XSLToai_dcCrosswalk: xsltName="
-                                          + xsltName);
+            LOGGER.debug("XSLToai_dcCrosswalk.XSLToai_dcCrosswalk: xsltName=" + xsltName);
             if (xsltName != null) {
                 StreamSource xslSource = new StreamSource(new FileInputStream(xsltName));
                 TransformerFactory tFactory = TransformerFactory.newInstance();
                 this.transformer = tFactory.newTransformer(xslSource);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }

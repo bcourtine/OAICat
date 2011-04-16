@@ -22,7 +22,6 @@
  *
  * 2002-04-09 Created
  */
-
 package edu.getty.oai.server.catalog;
 
 import org.oclc.oai.server.catalog.*;
@@ -43,6 +42,8 @@ import org.oclc.oai.server.verb.BadArgumentException;
 import org.oclc.oai.server.verb.NoMetadataFormatsException;
 import org.oclc.oai.server.verb.NoSetHierarchyException;
 import org.oclc.oai.server.verb.NoItemsMatchException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -53,7 +54,9 @@ import org.oclc.oai.server.verb.NoItemsMatchException;
  */
 
 public class GettyFileSystemOAICatalog extends AbstractCatalog {
-    static final boolean debug = false;
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(GettyFileSystemOAICatalog.class);
 
     private SimpleDateFormat dateFormatter = new SimpleDateFormat();
     protected String homeDir;
@@ -73,21 +76,15 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
                     "maxListSize is missing from the properties file");
         }
         maxListSize = Integer.parseInt(temp);
-        if (debug) {
-            System.out.println("in GettyFileSystemOAICatalog(): maxListSize=" +
-                    maxListSize);
-        }
+
+        LOGGER.debug("in GettyFileSystemOAICatalog(): maxListSize=" + maxListSize);
 
         homeDir = properties.getProperty("GettyFileSystemOAICatalog.homeDir");
         if (homeDir == null) {
-            throw new IllegalArgumentException("GettyFileSystemOAICatalog." +
-                    "homeDir is missing from the properties file");
-        }
-        if (debug) {
-            System.out.println("in GettyFileSystemOAICatalog(): homeDir=" +
-                    homeDir);
+            throw new IllegalArgumentException("GettyFileSystemOAICatalog. homeDir is missing from the properties file");
         }
 
+        LOGGER.debug("in GettyFileSystemOAICatalog(): homeDir=" + homeDir);
 
         File homeFile = new File(homeDir);
         int homeDirLen = homeFile.getPath().length() + 1;
@@ -120,7 +117,7 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
                     loadFileMap(homeDirLen, child);
                 } else if (isMetadataFile(child)) {
                     String path = file2path(homeDirLen, child);
-                    System.out.println("parsing : " + path);
+                    LOGGER.debug("parsing : " + path);
                     String datestamp = date2OAIDatestamp(new Date(child.lastModified()));
 
                     fileDateMap.put(path, datestamp);
@@ -138,14 +135,13 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new IOException(e.getMessage());
         }
     }
 
     /**
-     * Override this method if some files exist in the
-     * filesystem that aren't metadata records.
+     * Override this method if some files exist in the filesystem that aren't metadata records.
      *
      * @param child the File to be investigated
      * @return true if it contains metadata, false otherwise
@@ -265,12 +261,9 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
      * @param oaiIdentifier the OAI identifier
      * @param metadataPrefix the OAI metadataPrefix
      * @return the Record object containing the result.
-     * @throws CannotDisseminateFormatException signals an http status
-     * code 400 problem
-     * @throws IdDoesNotExistException signals an http status code 404
-     * problem
-     * @throws OAIInternalServerError signals an http status code 500
-     * problem
+     * @throws CannotDisseminateFormatException signals an http status code 400 problem
+     * @throws IdDoesNotExistException signals an http status code 404 problem
+     * @throws OAIInternalServerError signals an http status code 500 problem
      */
     public String getRecord(String oaiIdentifier, String metadataPrefix)
             throws IdDoesNotExistException, CannotDisseminateFormatException, OAIInternalServerError {
@@ -284,7 +277,7 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
             }
             return constructRecord(nativeItem, metadataPrefix);
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError("Database Failure");
         }
     }
@@ -309,7 +302,7 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
             String localIdentifier = getRecordFactory().fromOAIIdentifier(oaiIdentifier);
             extensionList = getExtensionList(localIdentifier);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError("Database Failure");
         }
 
@@ -324,20 +317,15 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
     /**
      * Retrieve a list of Identifiers that satisfy the criteria parameters
      *
-     * @param from beginning date in the form of YYYY-MM-DD or null if earliest
-     * date is desired
-     * @param until ending date in the form of YYYY-MM-DD or null if latest
-     * date is desired
+     * @param from beginning date in the form of YYYY-MM-DD or null if earliest date is desired
+     * @param until ending date in the form of YYYY-MM-DD or null if latest date is desired
      * @param set set name or null if no set is desired
-     * @return a Map object containing an optional "resumptionToken" key/value
-     *         pair and an "identifiers" Map object. The "identifiers" Map contains OAI
-     *         identifier keys with corresponding values of "true" or null depending on
-     *         whether the identifier is deleted or not.
+     * @return a Map object containing an optional "resumptionToken" key/value pair and an "identifiers" Map object. The "identifiers" Map contains
+     *         OAI identifier keys with corresponding values of "true" or null depending on whether the identifier is deleted or not.
      * @throws OAIInternalServerError signals an http status code 500 problem
      */
     public Map<String, Object> listIdentifiers(String from, String until, String set, String metadataPrefix)
-            throws BadArgumentException, CannotDisseminateFormatException, OAIInternalServerError,
-            NoItemsMatchException {
+            throws BadArgumentException, CannotDisseminateFormatException, OAIInternalServerError, NoItemsMatchException {
         purge(); // clean out old resumptionTokens
         Map<String, Object> listIdentifiersMap = new HashMap<String, Object>();
         List<String> headers = new ArrayList<String>();
@@ -358,7 +346,7 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
                     identifiers.add(header[1]);
                     count++;
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOGGER.error("An Exception occured", e);
                     throw new OAIInternalServerError(e.getMessage());
                 }
             }
@@ -404,12 +392,9 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
      *
      * @param resumptionToken implementation-dependent format taken from the
      * previous listIdentifiers() Map result.
-     * @return a Map object containing an optional "resumptionToken" key/value
-     *         pair and an "identifiers" Map object. The "identifiers" Map contains OAI
-     *         identifier keys with corresponding values of "true" or null depending on
-     *         whether the identifier is deleted or not.
-     * @throws OAIInternalServerError signals an http status code 500
-     * problem
+     * @return a Map object containing an optional "resumptionToken" key/value pair and an "identifiers" Map object. The "identifiers" Map
+     *         contains OAI identifier keys with corresponding values of "true" or null depending on whether the identifier is deleted or not.
+     * @throws OAIInternalServerError signals an http status code 500 problem
      */
     public Map<String, Object> listIdentifiers(String resumptionToken) throws BadResumptionTokenException, OAIInternalServerError {
         purge(); // clean out old resumptionTokens
@@ -443,7 +428,7 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
         /* Get some more records from your database */
         Iterator iterator = (Iterator) resumptionResults.remove(resumptionId);
         if (iterator == null) {
-            System.out.println("GettyFileSystemOAICatalog.listIdentifiers: reuse of old resumptionToken?");
+            LOGGER.debug("GettyFileSystemOAICatalog.listIdentifiers: reuse of old resumptionToken?");
             iterator = fileDateMap.entrySet().iterator();
             for (int i = 0; i < oldCount; ++i) {
                 iterator.next();
@@ -464,7 +449,7 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
                     identifiers.add(header[1]);
                     count++;
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOGGER.error("An Exception occured", e);
                     throw new OAIInternalServerError(e.getMessage());
                 }
             }
@@ -507,12 +492,10 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
      * Utility method to construct a Record object for a specified
      * metadataFormat from a native record
      *
-     *
      * @param nativeItem native item from the dataase
      * @param metadataPrefix the desired metadataPrefix for performing the crosswalk
      * @return the <record/> String
-     * @throws CannotDisseminateFormatException the record is not available
-     * for the specified metadataPrefix.
+     * @throws CannotDisseminateFormatException the record is not available for the specified metadataPrefix.
      */
     private String constructRecord(Map<String, Object> nativeItem, String metadataPrefix) throws CannotDisseminateFormatException, OAIInternalServerError {
         String schemaURL = null;
@@ -552,10 +535,8 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
     /**
      * Retrieve a list of records that satisfy the specified criteria
      *
-     * @param from beginning date in the form of YYYY-MM-DD or null if earliest
-     * date is desired
-     * @param until ending date in the form of YYYY-MM-DD or null if latest
-     * date is desired
+     * @param from beginning date in the form of YYYY-MM-DD or null if earliest date is desired
+     * @param until ending date in the form of YYYY-MM-DD or null if latest date is desired
      * @param set set name or null if no set is desired
      * @param metadataPrefix the OAI metadataPrefix
      * @return a Map object containing an optional "resumptionToken" key/value
@@ -587,7 +568,7 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
                     records.add(record);
                     count++;
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOGGER.error("An Exception occured", e);
                     throw new OAIInternalServerError(e.getMessage());
                 }
             }
@@ -631,8 +612,7 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
     /**
      * Retrieve the next set of records associated with the resumptionToken
      *
-     * @param resumptionToken implementation-dependent format taken from the
-     * previous listRecords() Map result.
+     * @param resumptionToken implementation-dependent format taken from the previous listRecords() Map result.
      * @return a Map object containing an optional "resumptionToken" key/value pair and a "records" Iterator object.
      *         The "records" Iterator contains a set of Records objects.
      * @throws OAIInternalServerError signals an http status code 500 problem
@@ -668,7 +648,7 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
         /* Get some more records from your database */
         Iterator iterator = (Iterator) resumptionResults.remove(resumptionId);
         if (iterator == null) {
-            System.out.println("GettyFileSystemOAICatalog.listRecords: reuse of old resumptionToken?");
+            LOGGER.debug("GettyFileSystemOAICatalog.listRecords: reuse of old resumptionToken?");
             iterator = fileDateMap.entrySet().iterator();
             for (int i = 0; i < oldCount; ++i) {
                 iterator.next();
@@ -677,7 +657,7 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
 
         /* load the records ArrayLists. */
         int count = 0;
-        ArrayList setIdentifiers = (ArrayList) setMap.get(set);
+        List<String> setIdentifiers = (List<String>) setMap.get(set);
         while (count < maxListSize && iterator.hasNext()) {
             Map.Entry entryDateMap = (Map.Entry) iterator.next();
             String path = (String) entryDateMap.getKey();
@@ -733,19 +713,17 @@ public class GettyFileSystemOAICatalog extends AbstractCatalog {
     }
 
 
-    public Map listSets() throws OAIInternalServerError,
-            NoSetHierarchyException {
+    public Map<String, Object> listSets() throws OAIInternalServerError, NoSetHierarchyException {
         if (sets.size() == 0) {
             throw new NoSetHierarchyException();
         }
-        Map listSetsMap = new LinkedHashMap();
+        Map<String, Object> listSetsMap = new LinkedHashMap<String, Object>();
         listSetsMap.put("sets", sets.iterator());
         return listSetsMap;
     }
 
 
-    public Map listSets(String resumptionToken)
-            throws BadResumptionTokenException, OAIInternalServerError {
+    public Map<String, Object> listSets(String resumptionToken) throws BadResumptionTokenException, OAIInternalServerError {
         throw new BadResumptionTokenException();
     }
 

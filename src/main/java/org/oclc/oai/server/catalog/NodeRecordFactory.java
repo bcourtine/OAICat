@@ -17,6 +17,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.TransformerException;
 
 import org.apache.xpath.XPathAPI;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -30,6 +32,9 @@ import org.oclc.oai.server.verb.OAIInternalServerError;
 
 /** NodeRecordFactory converts native XML "items" to "record" Strings. */
 public class NodeRecordFactory extends RecordFactory {
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(NodeRecordFactory.class);
 
     private static Element xmlnsEl = null;
     private static DocumentBuilderFactory factory = null;
@@ -48,7 +53,7 @@ public class NodeRecordFactory extends RecordFactory {
             xmlnsEl.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:oai", "http://www.openarchives.org/OAI/2.0/");
             xmlnsEl.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:explain", "http://explain.z3950.org/dtd/2.0/");
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
         }
     }
 
@@ -57,53 +62,49 @@ public class NodeRecordFactory extends RecordFactory {
     }
 
     /**
-     * Construct an NodeRecordFactory capable of producing the Crosswalk(s)
-     * specified in the properties file.
+     * Construct an NodeRecordFactory capable of producing the Crosswalk(s) specified in the properties file.
      *
-     * @param properties Contains information to configure the factory:
-     * specifically, the names of the crosswalk(s) supported
+     * @param properties Contains information to configure the factory: specifically, the names of the crosswalk(s) supported
      * @throws IllegalArgumentException Something is wrong with the argument.
      */
-    public NodeRecordFactory(Properties properties, Map<String, Object> crosswalkMap) throws IllegalArgumentException {
+    public NodeRecordFactory(Properties properties, Map<String, CrosswalkItem> crosswalkMap) throws IllegalArgumentException {
         super(crosswalkMap);
     }
 
-    private static Map<String, Object> getCrosswalkMap(String sruURL, boolean enrich)
-            throws IllegalArgumentException {
+    private static Map<String, CrosswalkItem> getCrosswalkMap(String sruURL, boolean enrich) throws IllegalArgumentException {
         try {
             DocumentBuilder parser = factory.newDocumentBuilder();
-            System.out.println("sruURL=" + sruURL);
+            LOGGER.debug("sruURL=" + sruURL);
             Document explainDoc = parser.parse(sruURL);
-            System.out.println("explainDoc=" + explainDoc);
+            LOGGER.debug("explainDoc=" + explainDoc);
             NodeList schemas = XPathAPI.selectNodeList(explainDoc, "/srw:explainResponse/srw:record/srw:recordData/explain:explain/explain:schemaInfo/explain:schema", xmlnsEl);
 
             // Load the formats the repository supports directly
-            Map<String, Object> crosswalkMap = new HashMap<String, Object>();
+            Map<String, CrosswalkItem> crosswalkMap = new HashMap<String, CrosswalkItem>();
             for (int i = 0; i < schemas.getLength(); ++i) {
-                Object[] crosswalkItem = crosswalkItemFactory(schemas.item(i));
-                for (int j = 0; j < crosswalkItem.length; ++j) {
-                    CrosswalkItem currentItem = (CrosswalkItem) crosswalkItem[j];
-                    // 		logger.debug(currentItem.toString());
+                CrosswalkItem[] crosswalkItem = crosswalkItemFactory(schemas.item(i));
+                for (CrosswalkItem currentItem : crosswalkItem) {
                     String key = currentItem.getMetadataPrefix();
-                    CrosswalkItem storedItem = (CrosswalkItem) crosswalkMap.get(key);
+                    CrosswalkItem storedItem = crosswalkMap.get(key);
                     if (storedItem == null || (currentItem.getRank() < storedItem.getRank())) {
                         crosswalkMap.put(key, currentItem);
                     }
                 }
             }
 
-            Map<String, Object> moreCrosswalkMap = new HashMap<String, Object>();
+            Map<String, CrosswalkItem> moreCrosswalkMap = new HashMap<String, CrosswalkItem>();
 
             // Now, combine the lists with the originals taking precidence
             moreCrosswalkMap.putAll(crosswalkMap);
             return moreCrosswalkMap;
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new IllegalArgumentException(sruURL);
         }
     }
 
-    public static Object[] crosswalkItemFactory(Node explainSchemaNode) throws TransformerException, OAIInternalServerError {
+    public static CrosswalkItem[] crosswalkItemFactory(Node explainSchemaNode) throws TransformerException, OAIInternalServerError {
+        CrosswalkItem[] result = null;
         List<CrosswalkItem> crosswalkItemList = new ArrayList<CrosswalkItem>();
         String nativeRecordSchema = XPathAPI.eval(explainSchemaNode, "@identifier", xmlnsEl).str();
         String metadataPrefix = XPathAPI.eval(explainSchemaNode, "@name", xmlnsEl).str();
@@ -116,13 +117,13 @@ public class NodeRecordFactory extends RecordFactory {
         } catch (SAXParseException e) {
             metadataNamespace = "";
         } catch (Exception e) {
-            System.out.println("Failed to get schema: " + schema);
-            e.printStackTrace();
+            LOGGER.error("Failed to get schema: " + schema, e);
             metadataNamespace = "";
         }
         CrosswalkItem crosswalkItem = new CrosswalkItem(nativeRecordSchema, metadataPrefix, schema, metadataNamespace, NodePassThruCrosswalk.class);
         crosswalkItemList.add(crosswalkItem);
-        return crosswalkItemList.toArray();
+        result = new CrosswalkItem[crosswalkItemList.size()];
+        return crosswalkItemList.toArray(result);
     }
 
     /**
@@ -161,7 +162,7 @@ public class NodeRecordFactory extends RecordFactory {
                 return XPathAPI.eval(identifierNode, "string()").str();
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
         }
         return null;
     }
@@ -183,7 +184,7 @@ public class NodeRecordFactory extends RecordFactory {
                 return XPathAPI.eval(datestampNode, "string()").str();
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
         }
         return null;
     }
@@ -228,8 +229,7 @@ public class NodeRecordFactory extends RecordFactory {
      * above individually.
      *
      * @param nativeItem the native record
-     * @return a String containing the OAI &lt;record&gt; or null if the default method should be
-     *         used.
+     * @return a String containing the OAI &lt;record&gt; or null if the default method should be used.
      */
     public String quickCreate(Object nativeItem, String schemaLocation, String metadataPrefix) {
         return null;

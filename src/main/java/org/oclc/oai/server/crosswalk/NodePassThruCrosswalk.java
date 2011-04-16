@@ -20,10 +20,9 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Element;
-
-// import gov.loc.www.zing.srw.StringOrXmlFragment;
-// import org.apache.axis.message.MessageElement;
 
 /**
  * Convert native "item" to oai_dc. In this case, the native "item"
@@ -33,36 +32,41 @@ import org.w3c.dom.Element;
  * involves pulling out the one that is requested.
  */
 public class NodePassThruCrosswalk extends Crosswalk {
-//     private static Logger logger = Logger.getLogger(NodePassThruCrosswalk.class);
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(NodePassThruCrosswalk.class);
+
     private static Transformer transformer = null;
-    
+
     /**
      * The constructor assigns the schemaLocation associated with this crosswalk. Since
      * the crosswalk is trivial in this case, no properties are utilized.
-     * @param crosswalkItem 
+     *
+     * @param crosswalkItem
      */
     public NodePassThruCrosswalk(CrosswalkItem crosswalkItem) {
-	super(crosswalkItem.getMetadataNamespace() + " " + crosswalkItem.getSchema());
-// 	BasicConfigurator.configure();
-	TransformerFactory transformerFactory = TransformerFactory.newInstance();
-	try {
-	    transformer = transformerFactory.newTransformer();
-	    transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-	    transformer.setOutputProperty(OutputKeys.STANDALONE, "no");
-	    transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-	} catch (Exception e) {
-	    e.printStackTrace();
-// 	    logger.fatal("failed to create transformer", e);
-	}
+        super(crosswalkItem.getMetadataNamespace() + " " + crosswalkItem.getSchema());
+
+        TransformerFactory transformerFactory = TransformerFactory.newInstance();
+        try {
+            transformer = transformerFactory.newTransformer();
+            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+            transformer.setOutputProperty(OutputKeys.STANDALONE, "no");
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        } catch (Exception e) {
+            LOGGER.error("An Exception occured", e);
+
+        }
     }
 
     /**
      * Can this nativeItem be represented in DC format?
+     *
      * @param nativeItem a record in native format
      * @return true if DC format is possible, false otherwise.
      */
     public boolean isAvailableFor(Object nativeItem) {
-	return true;
+        return true;
     }
 
     /**
@@ -75,26 +79,19 @@ public class NodePassThruCrosswalk extends Crosswalk {
      * @return a String containing the XML to be stored within the <metadata> element.
      */
     public String createMetadata(Object nativeItem) {
-	try {
-	    Map<String, Object> hashMap = (HashMap)nativeItem;
-	    Element dataNode = (Element)hashMap.get("metadata");
-	    DOMSource source = new DOMSource(dataNode);
-	    StringWriter sw = new StringWriter();
-	    StreamResult result = new StreamResult(sw);
-	    synchronized (transformer) {
-		transformer.transform(source, result);
-	    }
-	    return sw.toString();
-	} catch (Exception e) {
-// 	    logger.warn("NodePassThruCrosswalk.createMetadata failed", e);
-	    e.printStackTrace();
-	    return e.getMessage();
-	}
-// 	MessageElement[] messageElement = stringOrXmlFragment.get_any();
-// 	StringBuilder sb = new StringBuilder();
-// 	for (int i=0; i<messageElement.length; ++i) {
-// 	    sb.append(messageElement[i].toString());
-// 	}
-// 	return sb.toString();
+        try {
+            Map<String, Object> hashMap = (HashMap) nativeItem;
+            Element dataNode = (Element) hashMap.get("metadata");
+            DOMSource source = new DOMSource(dataNode);
+            StringWriter sw = new StringWriter();
+            StreamResult result = new StreamResult(sw);
+            synchronized (transformer) {
+                transformer.transform(source, result);
+            }
+            return sw.toString();
+        } catch (Exception e) {
+            LOGGER.error("An Exception occured", e);
+            return e.getMessage();
+        }
     }
 }

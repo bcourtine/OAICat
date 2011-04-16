@@ -600,13 +600,13 @@ public class ExtendedJDBCOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (UnsupportedEncodingException e) {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
@@ -966,13 +966,13 @@ public class ExtendedJDBCOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (SQLException e) {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
@@ -1118,7 +1118,7 @@ public class ExtendedJDBCOAICatalog extends AbstractCatalog {
                 }
 
                 if (rs.getRow() != oldCount) {
-//                  System.out.println("ExtendedJDBCOAICatalog.listIdentifiers: reuse of old resumptionToken?");
+//                  LOGGER.debug("ExtendedJDBCOAICatalog.listIdentifiers: reuse of old resumptionToken?");
                     rs.absolute(oldCount);
                 }
 

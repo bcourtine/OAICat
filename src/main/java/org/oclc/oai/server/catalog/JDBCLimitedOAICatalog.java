@@ -29,6 +29,8 @@ import org.oclc.oai.server.verb.NoMetadataFormatsException;
 import org.oclc.oai.server.verb.NoSetHierarchyException;
 import org.oclc.oai.server.verb.OAIInternalServerError;
 import org.oclc.oai.util.OAIUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * JDBCLimitedOAICatalog is an example of how to implement the AbstractCatalog interface
@@ -39,7 +41,9 @@ import org.oclc.oai.util.OAIUtil;
  * @deprecated Use ExtendedJDBCOAICatalog instead
  */
 public class JDBCLimitedOAICatalog extends AbstractCatalog {
-    private static final boolean debug = false;
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(JDBCLimitedOAICatalog.class);
 
     /**
      * SQL identifier query (loaded from properties)
@@ -207,7 +211,7 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             try {
                 persistentConnection = getNewConnection();
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new IOException(e.getMessage());
             }
         }
@@ -240,16 +244,14 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
     }
 
     /**
-     * Retrieve a list of schemaLocation values associated with the specified
-     * oaiIdentifier.
+     * Retrieve a list of schemaLocation values associated with the specified oaiIdentifier.
      *
      * @param oaiIdentifier the OAI identifier
      * @return a List<String> containing schemaLocation Strings
      * @throws OAIInternalServerError signals an http status code 500 problem
      * @throws IdDoesNotExistException the specified oaiIdentifier can't be found
-     * @throws NoMetadataFormatsException the specified oaiIdentifier was found
-     * but the item is flagged as deleted and thus no schemaLocations (i.e.
-     * metadataFormats) can be produced.
+     * @throws NoMetadataFormatsException the specified oaiIdentifier was found but the item is flagged as deleted and thus
+     * no schemaLocations (i.e. metadataFormats) can be produced.
      */
     public List<String> getSchemaLocations(String oaiIdentifier)
             throws OAIInternalServerError, IdDoesNotExistException, NoMetadataFormatsException {
@@ -257,8 +259,7 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
         try {
             con = startConnection();
             Statement stmt = con.createStatement();
-            ResultSet rs =
-                    stmt.executeQuery(populateIdentifierQuery(oaiIdentifier));
+            ResultSet rs = stmt.executeQuery(populateIdentifierQuery(oaiIdentifier));
             /*
              * Let your recordFactory decide which schemaLocations
              * (i.e. metadataFormats) it can produce from the record.
@@ -280,14 +281,13 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }
 
     /**
-     * Since the columns should only be read once, copy them into a
-     * HashMap and consider that to be the "record"
+     * Since the columns should only be read once, copy them into a HashMap and consider that to be the "record"
      *
      * @param rs The ResultSet row
      * @return a HashMap mapping column names with values
@@ -299,9 +299,7 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
         for (int i = 1; i <= count; ++i) {
             String fieldName = new StringBuilder().append(mdata.getTableName(i)).append(".").append(mdata.getColumnName(i)).toString();
             nativeItem.put(fieldName, rs.getObject(i));
-            if (debug) {
-                System.out.println(fieldName + "=" + nativeItem.get(fieldName));
-            }
+            LOGGER.debug(fieldName + "=" + nativeItem.get(fieldName));
         }
         return nativeItem;
     }
@@ -354,9 +352,9 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             }
             sb.append(token.substring(1));
         }
-        if (debug) {
-            System.out.println(sb.toString());
-        }
+
+        LOGGER.debug(sb.toString());
+
         return sb.toString();
     }
 
@@ -385,9 +383,9 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             sb.append(date.substring(8));
             sb.append("/");
             sb.append(date.substring(0, 4));
-            if (debug) {
-                System.out.println("JDBCLimitedOAICatalog.formatDate: from " + date + " to " + sb.toString());
-            }
+
+            LOGGER.debug("JDBCLimitedOAICatalog.formatDate: from " + date + " to " + sb.toString());
+
             return sb.toString();
         }
     }
@@ -422,9 +420,9 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             }
             sb.append(token.substring(1));
         }
-        if (debug) {
-            System.out.println(sb.toString());
-        }
+
+        LOGGER.debug(sb.toString());
+
         return sb.toString();
     }
 
@@ -458,9 +456,9 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             }
             sb.append(token.substring(1));
         }
-        if (debug) {
-            System.out.println(sb.toString());
-        }
+
+        LOGGER.debug(sb.toString());
+
         return sb.toString();
     }
 
@@ -494,9 +492,9 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             }
             sb.append(token.substring(1));
         }
-        if (debug) {
-            System.out.println(sb.toString());
-        }
+
+        LOGGER.debug(sb.toString());
+
         return sb.toString();
     }
 
@@ -540,7 +538,7 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             for (count = 0; count < maxListSize && rs.next(); ++count) {
                 Map<String, Object> nativeItem = getColumnValues(rs);
                 /* Use the RecordFactory to extract header/identifier pairs for each item */
-                Iterator setSpecs = getSetSpecs(nativeItem);
+                Iterator<String> setSpecs = getSetSpecs(nativeItem);
                 String[] header = getRecordFactory().createHeader(nativeItem, setSpecs);
                 headers.add(header[0]);
                 identifiers.add(header[1]);
@@ -584,13 +582,13 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (UnsupportedEncodingException e) {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
@@ -636,9 +634,9 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             }
             oldCount = Integer.parseInt(tokenizer.nextToken());
             metadataPrefix = tokenizer.nextToken();
-            if (debug) {
-                System.out.println("JDBCLimitedOAICatalog.listIdentifiers: set=>" + set + "<");
-            }
+
+            LOGGER.debug("JDBCLimitedOAICatalog.listIdentifiers: set=>" + set + "<");
+
         } catch (NoSuchElementException e) {
             throw new BadResumptionTokenException();
         }
@@ -693,13 +691,13 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (SQLException e) {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
@@ -738,7 +736,7 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }
@@ -760,8 +758,7 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
      * @return a Map object containing entries for a "records" Iterator object
      *         (containing XML <record/> Strings) and an optional "resumptionMap" Map.
      * @throws OAIInternalServerError signals an http status code 500 problem
-     * @throws CannotDisseminateFormatException the metadataPrefix isn't
-     * supported by the item.
+     * @throws CannotDisseminateFormatException the metadataPrefix isn't supported by the item.
      */
     public Map<String, Object> listRecords(String from, String until, String set, String metadataPrefix)
             throws CannotDisseminateFormatException, NoItemsMatchException, OAIInternalServerError {
@@ -824,13 +821,13 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (SQLException e) {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
@@ -932,13 +929,13 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (SQLException e) {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
@@ -991,9 +988,8 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
 
             Connection con = null;
             try {
-                if (debug) {
-                    System.out.println(setQuery);
-                }
+
+                LOGGER.debug(setQuery);
 
                 con = startConnection();
                 /* Get some records from your database */
@@ -1009,9 +1005,9 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
                     /* Use the RecordFactory to extract header/set pairs for each item */
                     Map<String, Object> nativeItem = getColumnValues(rs);
                     sets.add(getSetXML(nativeItem));
-                    if (debug) {
-                        System.out.println("JDBCLimitedOAICatalog.listSets: adding an entry");
-                    }
+
+                    LOGGER.debug("JDBCLimitedOAICatalog.listSets: adding an entry");
+
                 }
 
                 /* decide if you're done */
@@ -1041,7 +1037,7 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
                 if (con != null) {
                     endConnection(con);
                 }
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new OAIInternalServerError(e.getMessage());
             }
 
@@ -1124,7 +1120,7 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
                     listSetsMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(), numRows, oldCount));
                 }
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new OAIInternalServerError(e.getMessage());
             }
 
@@ -1160,7 +1156,7 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }
@@ -1192,7 +1188,7 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }
@@ -1238,7 +1234,7 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
         try {
             return URLEncoder.encode((String) setItem.get(setSpecListLabel), "UTF-8");
         } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             return "UnsupportedEncodingException";
         }
     }
@@ -1275,7 +1271,7 @@ public class JDBCLimitedOAICatalog extends AbstractCatalog {
                 persistentConnection.close();
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
         }
         persistentConnection = null;
     }

@@ -17,6 +17,8 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamSource;
 
 import org.oclc.oai.server.verb.OAIInternalServerError;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Convert native "item" to xsl. In this case, the native "item"
@@ -26,17 +28,18 @@ import org.oclc.oai.server.verb.OAIInternalServerError;
  * involves pulling out the one that is requested.
  */
 public class XSLTxslCrosswalk extends XSLTCrosswalk {
-//    private Transformer transformer = null;
-    
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(XSLTxslCrosswalk.class);
+
     /**
      * The constructor assigns the schemaLocation associated with this crosswalk. Since
      * the crosswalk is trivial in this case, no properties are utilized.
      *
      * @param properties properties that are needed to configure the crosswalk.
      */
-    public XSLTxslCrosswalk(Properties properties)
-        throws OAIInternalServerError {
- 	super(properties, "http://www.w3.org/1999/XSL/Transform http://www.w3.org/1999/XSL/Transform.xsd", null);
+    public XSLTxslCrosswalk(Properties properties) throws OAIInternalServerError {
+        super(properties, "http://www.w3.org/1999/XSL/Transform http://www.w3.org/1999/XSL/Transform.xsd", null);
         try {
             String xsltName = properties.getProperty("XSLTxslCrosswalk.xsltName");
             if (xsltName != null) {
@@ -45,7 +48,7 @@ public class XSLTxslCrosswalk extends XSLTCrosswalk {
                 this.transformer = tFactory.newTransformer(xslSource);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }

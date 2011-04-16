@@ -30,6 +30,8 @@ import org.oclc.oai.server.verb.NoMetadataFormatsException;
 import org.oclc.oai.server.verb.NoSetHierarchyException;
 import org.oclc.oai.server.verb.OAIInternalServerError;
 import org.oclc.oai.util.OAIUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * JDBCOAICatalog is an example of how to implement the AbstractCatalog interface
@@ -40,7 +42,9 @@ import org.oclc.oai.util.OAIUtil;
  * @deprecated Use ExtendedJDBCOAICatalog instead
  */
 public class JDBCOAICatalog extends AbstractCatalog {
-    private static final boolean debug = false;
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(JDBCOAICatalog.class);
 
     /**
      * SQL identifier query (loaded from properties)
@@ -202,15 +206,14 @@ public class JDBCOAICatalog extends AbstractCatalog {
         try {
             Class.forName(jdbcDriverName);
         } catch (ClassNotFoundException e) {
-            throw new IllegalArgumentException("JDBCOAICatalog.jdbcDriverName is invalid: "
-                    + jdbcDriverName);
+            throw new IllegalArgumentException("JDBCOAICatalog.jdbcDriverName is invalid: " + jdbcDriverName);
         }
 
         if (isPersistentConnection) {
             try {
                 persistentConnection = getNewConnection();
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new IOException(e.getMessage());
             }
         }
@@ -224,7 +227,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
     private Connection startConnection() throws SQLException {
         if (persistentConnection != null) {
             if (persistentConnection.isClosed()) {
-                System.out.println("Persistent connection has expired.");
+                LOGGER.debug("Persistent connection has expired.");
                 persistentConnection = getNewConnection();
             }
             return persistentConnection;
@@ -236,9 +239,9 @@ public class JDBCOAICatalog extends AbstractCatalog {
     private void endConnection(Connection con) throws OAIInternalServerError {
         if (persistentConnection == null) {
             try {
-                if (debug) {
-                    System.out.println("ending connection");
-                }
+
+                LOGGER.debug("ending connection");
+
                 con.close();
             } catch (SQLException e) {
                 throw new OAIInternalServerError(e.getMessage());
@@ -247,8 +250,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
     }
 
     /**
-     * Retrieve a list of schemaLocation values associated with the specified
-     * oaiIdentifier.
+     * Retrieve a list of schemaLocation values associated with the specified oaiIdentifier.
      *
      * @param oaiIdentifier the OAI identifier
      * @return a List<String> containing schemaLocation Strings
@@ -264,8 +266,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
         try {
             con = startConnection();
             Statement stmt = con.createStatement();
-            ResultSet rs =
-                    stmt.executeQuery(populateIdentifierQuery(oaiIdentifier));
+            ResultSet rs = stmt.executeQuery(populateIdentifierQuery(oaiIdentifier));
             /*
              * Let your recordFactory decide which schemaLocations
              * (i.e. metadataFormats) it can produce from the record.
@@ -287,7 +288,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }
@@ -307,9 +308,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
         for (int i = 1; i <= count; ++i) {
             String fieldName = new StringBuilder().append(mdata.getTableName(i)).append(".").append(mdata.getColumnName(i)).toString();
             nativeItem.put(fieldName, rs.getObject(i));
-            if (debug) {
-                System.out.println(fieldName + "=" + nativeItem.get(fieldName));
-            }
+            LOGGER.debug(fieldName + "=" + nativeItem.get(fieldName));
         }
         return nativeItem;
     }
@@ -356,9 +355,8 @@ public class JDBCOAICatalog extends AbstractCatalog {
             }
             sb.append(token.substring(1));
         }
-        if (debug) {
-            System.out.println(sb.toString());
-        }
+        LOGGER.debug(sb.toString());
+
         return sb.toString();
     }
 
@@ -387,9 +385,9 @@ public class JDBCOAICatalog extends AbstractCatalog {
             sb.append(date.substring(8));
             sb.append("/");
             sb.append(date.substring(0, 4));
-            if (debug) {
-                System.out.println("JDBCOAICatalog.formatDate: from " + date + " to " + sb.toString());
-            }
+
+            LOGGER.debug("JDBCOAICatalog.formatDate: from " + date + " to " + sb.toString());
+
             return sb.toString();
         }
     }
@@ -424,9 +422,8 @@ public class JDBCOAICatalog extends AbstractCatalog {
             }
             sb.append(token.substring(1));
         }
-        if (debug) {
-            System.out.println(sb.toString());
-        }
+        LOGGER.debug(sb.toString());
+
         return sb.toString();
     }
 
@@ -460,9 +457,8 @@ public class JDBCOAICatalog extends AbstractCatalog {
             }
             sb.append(token.substring(1));
         }
-        if (debug) {
-            System.out.println(sb.toString());
-        }
+        LOGGER.debug(sb.toString());
+
         return sb.toString();
     }
 
@@ -496,9 +492,8 @@ public class JDBCOAICatalog extends AbstractCatalog {
             }
             sb.append(token.substring(1));
         }
-        if (debug) {
-            System.out.println(sb.toString());
-        }
+        LOGGER.debug(sb.toString());
+
         return sb.toString();
     }
 
@@ -583,7 +578,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
@@ -671,7 +666,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
                 listIdentifiersMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(), numRows, oldCount));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
@@ -709,7 +704,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }
@@ -731,8 +726,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
      * @return a Map object containing entries for a "records" Iterator object
      *         (containing XML <record/> Strings) and an optional "resumptionMap" Map.
      * @throws OAIInternalServerError signals an http status code 500 problem
-     * @throws CannotDisseminateFormatException the metadataPrefix isn't
-     * supported by the item.
+     * @throws CannotDisseminateFormatException the metadataPrefix isn't supported by the item.
      */
     public Map<String, Object> listRecords(String from, String until, String set, String metadataPrefix)
             throws CannotDisseminateFormatException, NoItemsMatchException, OAIInternalServerError {
@@ -791,7 +785,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
@@ -880,7 +874,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
                 listRecordsMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(), numRows, oldCount));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
@@ -935,9 +929,8 @@ public class JDBCOAICatalog extends AbstractCatalog {
 
             try {
                 con = startConnection();
-                if (debug) {
-                    System.out.println(setQuery);
-                }
+
+                LOGGER.debug(setQuery);
 
                 /* Get some records from your database */
                 Statement stmt = con.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
@@ -952,9 +945,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
                     /* Use the RecordFactory to extract header/set pairs for each item */
                     Map<String, Object> nativeItem = getColumnValues(rs);
                     sets.add(getSetXML(nativeItem));
-                    if (debug) {
-                        System.out.println("JDBCOAICatalog.listSets: adding an entry");
-                    }
+                    LOGGER.debug("JDBCOAICatalog.listSets: adding an entry");
                 }
 
                 /* decide if you're done */
@@ -988,7 +979,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
                 if (con != null) {
                     endConnection(con);
                 }
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new OAIInternalServerError(e.getMessage());
             }
 
@@ -1073,7 +1064,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
                     listSetsMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(), numRows, oldCount));
                 }
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new OAIInternalServerError(e.getMessage());
             }
 
@@ -1109,7 +1100,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }
@@ -1141,7 +1132,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
             if (con != null) {
                 endConnection(con);
             }
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }
@@ -1222,7 +1213,7 @@ public class JDBCOAICatalog extends AbstractCatalog {
                 persistentConnection.close();
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
         }
         persistentConnection = null;
     }

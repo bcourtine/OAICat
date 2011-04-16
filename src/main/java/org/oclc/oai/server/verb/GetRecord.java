@@ -19,15 +19,19 @@ import javax.xml.transform.TransformerException;
 
 import org.oclc.oai.server.catalog.AbstractCatalog;
 import org.oclc.oai.server.crosswalk.Crosswalks;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * This class represents a GetRecord response on either the server or
- * the client.
+ * This class represents a GetRecord response on either the server or the client.
  *
  * @author Jeffrey A. Young, OCLC Online Computer Library Center
  */
 public class GetRecord extends ServerVerb {
-    private static final boolean debug = false;
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(GetRecord.class);
+
     private static List<String> validParamNames = new ArrayList<String>();
 
     static {
@@ -42,18 +46,12 @@ public class GetRecord extends ServerVerb {
      * @param context the servlet context
      * @param request the servlet request
      * @return a String containing the XML response
-     * @throws OAIBadRequestException an http 400 status error occurred
-     * @throws OAINotFoundException an http 404 status error occurred
      * @throws OAIInternalServerError an http 500 status error occurred
      */
-    public static String construct(HashMap context,
-            HttpServletRequest request,
-            HttpServletResponse response,
-            Transformer serverTransformer)
+    public static String construct(HashMap context, HttpServletRequest request, HttpServletResponse response, Transformer serverTransformer)
             throws OAIInternalServerError, TransformerException {
         Properties properties = (Properties) context.get("OAIHandler.properties");
-        AbstractCatalog abstractCatalog =
-                (AbstractCatalog) context.get("OAIHandler.catalog");
+        AbstractCatalog abstractCatalog = (AbstractCatalog) context.get("OAIHandler.catalog");
         String baseURL = properties.getProperty("OAIHandler.baseURL");
         if (baseURL == null) {
             try {
@@ -65,13 +63,8 @@ public class GetRecord extends ServerVerb {
         StringBuilder sb = new StringBuilder();
         String identifier = request.getParameter("identifier");
         String metadataPrefix = request.getParameter("metadataPrefix");
-
-        if (debug) {
-            System.out.println("GetRecord.constructGetRecord: identifier=" +
-                    identifier);
-            System.out.println("GetRecord.constructGetRecord: metadataPrefix="
-                    + metadataPrefix);
-        }
+        LOGGER.debug("GetRecord.constructGetRecord: identifier=" + identifier);
+        LOGGER.debug("GetRecord.constructGetRecord: metadataPrefix=" + metadataPrefix);
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>");
         String styleSheet = properties.getProperty("OAIHandler.styleSheet");
         if (styleSheet != null) {
@@ -90,13 +83,10 @@ public class GetRecord extends ServerVerb {
         sb.append("<responseDate>");
         sb.append(createResponseDate(new Date()));
         sb.append("</responseDate>");
-//         sb.append("<requestURL>");
-//         sb.append(getRequestURL(request));
-//         sb.append("</requestURL>");
+
         Crosswalks crosswalks = abstractCatalog.getCrosswalks();
         try {
-            if (metadataPrefix == null || metadataPrefix.length() == 0
-                    || identifier == null || identifier.length() == 0
+            if (metadataPrefix == null || metadataPrefix.length() == 0 || identifier == null || identifier.length() == 0
                     || hasBadArguments(request, validParamNames.iterator(), validParamNames)) {
                 throw new BadArgumentException();
             } else if (!crosswalks.containsValue(metadataPrefix)) {

@@ -13,7 +13,6 @@ package org.oclc.oai.server.catalog;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,6 +34,8 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.apache.xpath.XPathAPI;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -53,7 +54,10 @@ import org.oclc.oai.server.verb.NoSetHierarchyException;
 import org.oclc.oai.server.verb.OAIInternalServerError;
 
 public class SRUOAICatalog extends AbstractCatalog {
-    private static final boolean debug = false;
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(SRUOAICatalog.class);
+
     private String sruURL;
     private String sortKeys = "";
     protected int maxListSize;
@@ -74,7 +78,7 @@ public class SRUOAICatalog extends AbstractCatalog {
             xmlnsEl = xmlnsDoc.getDocumentElement();
             xmlnsEl.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:srw", "http://www.loc.gov/zing/srw/");
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
         }
     }
 
@@ -88,8 +92,7 @@ public class SRUOAICatalog extends AbstractCatalog {
             sortKeys = "";
         }
 
-        String maxListSize =
-                properties.getProperty("SRUOAICatalog.maxListSize");
+        String maxListSize = properties.getProperty("SRUOAICatalog.maxListSize");
 
         if (maxListSize == null) {
             throw new IllegalArgumentException("SRUOAICatalog.maxListSize is missing from the properties file");
@@ -131,8 +134,7 @@ public class SRUOAICatalog extends AbstractCatalog {
             }
             listSetsMap.put("sets", newList.iterator());
         } catch (Throwable e) {
-            System.err.println("SRUOAICatalog.listSets: browse failed");
-            e.printStackTrace();
+            LOGGER.error("SRUOAICatalog.listSets: browse failed", e);
         }
 
         return listSetsMap;
@@ -160,13 +162,13 @@ public class SRUOAICatalog extends AbstractCatalog {
         try {
             srResponse = getSearchRetrieveResponse(sruURL, from, until, set, "http://www.openarchives.org/OAI/2.0/#header", 1, maxListSize, "xml");
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (SAXException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (ParserConfigurationException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
         try {
@@ -182,16 +184,16 @@ public class SRUOAICatalog extends AbstractCatalog {
                         hashMap.put("metadata", getNativeMetadata(localIdentifier,
                                 metadataPrefix));
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        LOGGER.error("An Exception occured", e);
                         throw new OAIInternalServerError(e.getMessage());
                     } catch (TransformerException e) {
-                        e.printStackTrace();
+                        LOGGER.error("An Exception occured", e);
                         throw new OAIInternalServerError(e.getMessage());
                     } catch (ParserConfigurationException e) {
-                        e.printStackTrace();
+                        LOGGER.error("An Exception occured", e);
                         throw new OAIInternalServerError(e.getMessage());
                     } catch (SAXException e) {
-                        e.printStackTrace();
+                        LOGGER.error("An Exception occured", e);
                         throw new OAIInternalServerError(e.getMessage());
                     }
                     String[] header = recordFactory.createHeader(hashMap);
@@ -213,7 +215,7 @@ public class SRUOAICatalog extends AbstractCatalog {
                                 getResumptionMap(resumptionToken.toString()));
                     }
                 } catch (TransformerException e) {
-                    e.printStackTrace();
+                    LOGGER.error("An Exception occured", e);
                     throw new OAIInternalServerError(e.getMessage());
                 }
             } else {
@@ -223,16 +225,16 @@ public class SRUOAICatalog extends AbstractCatalog {
             listIdentifiersMap.put("identifiers", identifiers.iterator());
             return listIdentifiersMap;
         } catch (TransformerException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (SAXException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (ParserConfigurationException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }
@@ -272,13 +274,13 @@ public class SRUOAICatalog extends AbstractCatalog {
                                 maxListSize,
                                 "xml");
             } catch (IOException e) {
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new OAIInternalServerError(e.getMessage());
             } catch (SAXException e) {
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new OAIInternalServerError(e.getMessage());
             } catch (ParserConfigurationException e) {
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw new OAIInternalServerError(e.getMessage());
             }
             NodeList nodeList = getRecords(srResponse);
@@ -314,7 +316,7 @@ public class SRUOAICatalog extends AbstractCatalog {
             listIdentifiersMap.put("headers", headers.iterator());
             listIdentifiersMap.put("identifiers", identifiers.iterator());
         } catch (Throwable e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError("Database Failure");
         }
         return listIdentifiersMap;
@@ -345,16 +347,16 @@ public class SRUOAICatalog extends AbstractCatalog {
                         throw new OAIInternalServerError("Null Record");
                     }
                 } catch (TransformerException e) {
-                    e.printStackTrace();
+                    LOGGER.error("An Exception occured", e);
                     throw new OAIInternalServerError(e.getMessage());
                 } catch (SAXException e) {
-                    e.printStackTrace();
+                    LOGGER.error("An Exception occured", e);
                     throw new OAIInternalServerError(e.getMessage());
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOGGER.error("An Exception occured", e);
                     throw new OAIInternalServerError(e.getMessage());
                 } catch (ParserConfigurationException e) {
-                    e.printStackTrace();
+                    LOGGER.error("An Exception occured", e);
                     throw new OAIInternalServerError(e.getMessage());
                 }
             }
@@ -370,16 +372,16 @@ public class SRUOAICatalog extends AbstractCatalog {
         try {
             nativeObject = getFullRecord(sruURL, oaiIdentifier, metadataPrefix);
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (ParserConfigurationException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (TransformerException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (SAXException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
@@ -395,7 +397,7 @@ public class SRUOAICatalog extends AbstractCatalog {
             try {
                 return getRecordFactory().create(nativeObject, schemaURL, metadataPrefix);
             } catch (CannotDisseminateFormatException e) {
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw e;
             }
         } else {
@@ -409,37 +411,34 @@ public class SRUOAICatalog extends AbstractCatalog {
         try {
             nativeObject = getFullRecord(sruURL, oaiIdentifier, metadataPrefix);
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (ParserConfigurationException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (TransformerException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (SAXException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
 
-        if (debug) {
-            System.out.println(nativeObject);
-        }
+        LOGGER.debug(nativeObject.toString());
+
         if (nativeObject != null) {
             String schemaURL = null;
 
             if (metadataPrefix != null) {
                 if ((schemaURL = getCrosswalks().getSchemaURL(metadataPrefix)) == null) {
-                    if (debug) {
-                        System.out.println("SRUOAICatalog.getRecord: metadataPrefix not found");
-                    }
+                    LOGGER.warn("SRUOAICatalog.getRecord: metadataPrefix not found");
                     throw new CannotDisseminateFormatException(metadataPrefix);
                 }
             }
             try {
                 return getRecordFactory().createMetadata(nativeObject, schemaURL, metadataPrefix);
             } catch (CannotDisseminateFormatException e) {
-                e.printStackTrace();
+                LOGGER.error("An Exception occured", e);
                 throw e;
             }
         } else {
@@ -498,13 +497,13 @@ public class SRUOAICatalog extends AbstractCatalog {
         try {
             srResponse = getSearchRetrieveResponse(sruURL, from, until, set, "http://www.openarchives.org/OAI/2.0/#header", 1, maxListSize, "xml");
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (SAXException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (ParserConfigurationException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
         try {
@@ -525,13 +524,13 @@ public class SRUOAICatalog extends AbstractCatalog {
                     try {
                         map.put("metadata", getNativeMetadata(localIdentifier, metadataPrefix));
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        LOGGER.error("An Exception occured", e);
                         throw new OAIInternalServerError(e.getMessage());
                     } catch (ParserConfigurationException e) {
-                        e.printStackTrace();
+                        LOGGER.error("An Exception occured", e);
                         throw new OAIInternalServerError(e.getMessage());
                     } catch (SAXException e) {
-                        e.printStackTrace();
+                        LOGGER.error("An Exception occured", e);
                         throw new OAIInternalServerError(e.getMessage());
                     }
                     recordsList.add(recordFactory.create(map, schemaURL, metadataPrefix));
@@ -553,16 +552,16 @@ public class SRUOAICatalog extends AbstractCatalog {
             listRecordsMap.put("records", recordsList.iterator());
             return listRecordsMap;
         } catch (TransformerException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (SAXException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         } catch (ParserConfigurationException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }
@@ -578,7 +577,7 @@ public class SRUOAICatalog extends AbstractCatalog {
             nextRecordPosition = tokenizer.nextToken();
             metadataPrefix = tokenizer.nextToken();
         } catch (NoSuchElementException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new BadResumptionTokenException();
         }
         Map<String, Object> listRecordsMap = new HashMap<String, Object>();
@@ -614,7 +613,7 @@ public class SRUOAICatalog extends AbstractCatalog {
             }
             listRecordsMap.put("records", recordsList.iterator());
         } catch (Throwable e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError("Database Failure");
         }
         return listRecordsMap;

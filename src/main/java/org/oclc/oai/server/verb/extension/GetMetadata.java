@@ -29,6 +29,8 @@ import org.oclc.oai.server.verb.CannotDisseminateFormatException;
 import org.oclc.oai.server.verb.IdDoesNotExistException;
 import org.oclc.oai.server.verb.OAIInternalServerError;
 import org.oclc.oai.server.verb.ServerVerb;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class represents a GetMetadata response on either the server or
@@ -37,7 +39,10 @@ import org.oclc.oai.server.verb.ServerVerb;
  * @author Jeffrey A. Young, OCLC Online Computer Library Center
  */
 public class GetMetadata extends ServerVerb {
-    private static final boolean debug = false;
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(GetMetadata.class);
+
     private static List<String> validParamNames = new ArrayList<String>();
 
     static {
@@ -52,17 +57,12 @@ public class GetMetadata extends ServerVerb {
      * @param context the servlet context
      * @param request the servlet request
      * @return a String containing the XML response
-     * @throws OAIBadRequestException an http 400 status error occurred
-     * @throws OAINotFoundException an http 404 status error occurred
      * @throws OAIInternalServerError an http 500 status error occurred
      */
-    public static String construct(HashMap context,
-            HttpServletRequest request, HttpServletResponse response,
-            Transformer serverTransformer)
+    public static String construct(HashMap context, HttpServletRequest request, HttpServletResponse response, Transformer serverTransformer)
             throws FileNotFoundException, TransformerException {
         Properties properties = (Properties) context.get("OAIHandler.properties");
-        AbstractCatalog abstractCatalog =
-                (AbstractCatalog) context.get("OAIHandler.catalog");
+        AbstractCatalog abstractCatalog = (AbstractCatalog) context.get("OAIHandler.catalog");
         String baseURL = properties.getProperty("OAIHandler.baseURL");
         if (baseURL == null) {
             try {
@@ -75,12 +75,9 @@ public class GetMetadata extends ServerVerb {
         String identifier = request.getParameter("identifier");
         String metadataPrefix = request.getParameter("metadataPrefix");
 
-        if (debug) {
-            System.out.println("GetMetadata.constructGetMetadata: identifier=" +
-                    identifier);
-            System.out.println("GetMetadata.constructGetMetadata: metadataPrefix="
-                    + metadataPrefix);
-        }
+        LOGGER.debug("GetMetadata.constructGetMetadata: identifier=" + identifier);
+        LOGGER.debug("GetMetadata.constructGetMetadata: metadataPrefix=" + metadataPrefix);
+
         Crosswalks crosswalks = abstractCatalog.getCrosswalks();
         sb.append("<?xml version=\"1.0\" encoding=\"");
         String encoding = crosswalks.getEncoding(metadataPrefix);
@@ -97,51 +94,37 @@ public class GetMetadata extends ServerVerb {
             sb.append("\n");
         }
         try {
-            if (metadataPrefix == null || metadataPrefix.length() == 0
-                    || identifier == null || identifier.length() == 0) {
-                if (debug) {
-                    System.out.println("Bad argument");
-                }
+            if (metadataPrefix == null || metadataPrefix.length() == 0 || identifier == null || identifier.length() == 0) {
+                LOGGER.warn("Bad argument");
                 throw new BadArgumentException();
             } else if (!crosswalks.containsValue(metadataPrefix)) {
-                if (debug) {
-                    System.out.println("crosswalk not present: " + metadataPrefix);
-                }
+                LOGGER.warn("crosswalk not present: " + metadataPrefix);
                 throw new CannotDisseminateFormatException(metadataPrefix);
             } else {
                 String metadata = abstractCatalog.getMetadata(identifier, metadataPrefix);
                 if (metadata != null) {
                     sb.append(metadata);
                 } else {
-                    if (debug) {
-                        System.out.println("ID does not exist");
-                    }
+                    LOGGER.warn("ID does not exist");
                     throw new IdDoesNotExistException(identifier);
                 }
             }
         } catch (BadArgumentException e) {
-            if (debug) {
-                e.printStackTrace();
-            }
+            LOGGER.error("An Exception occured", e);
             throw new FileNotFoundException();
         } catch (CannotDisseminateFormatException e) {
-            if (debug) {
-                e.printStackTrace();
-            }
+            LOGGER.error("An Exception occured", e);
             throw new FileNotFoundException();
         } catch (IdDoesNotExistException e) {
-            if (debug) {
-                e.printStackTrace();
-            }
+            LOGGER.error("An Exception occured", e);
             throw new FileNotFoundException();
         } catch (OAIInternalServerError e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             return BadVerb.construct(context, request, response, serverTransformer);
         }
-        if (debug) {
-            System.out.println("GetMetadata.construct: contentType=" + crosswalks.getContentType(metadataPrefix));
-            System.out.println("GetMetadata.construct: prerendered sb=" + sb.toString());
-        }
+        LOGGER.debug("GetMetadata.construct: contentType=" + crosswalks.getContentType(metadataPrefix));
+        LOGGER.debug("GetMetadata.construct: prerendered sb=" + sb.toString());
+
         return render(response, crosswalks.getContentType(metadataPrefix), sb.toString(), (Transformer) null);
     }
 }

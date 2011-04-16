@@ -34,6 +34,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.xpath.XPathAPI;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
@@ -55,11 +57,13 @@ import org.oclc.oai.server.verb.OAIInternalServerError;
  */
 
 public class NewFileSystemOAICatalog extends AbstractCatalog {
-    static final boolean debug = false;
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(NewFileSystemOAICatalog.class);
 
     private SimpleDateFormat dateFormatter = new SimpleDateFormat();
     protected String homeDir;
-    protected HashMap fileDateMap = new HashMap();
+    protected Map<String, Object> fileDateMap = new HashMap<String, Object>();
     private Map<String, Object> setMap = new HashMap<String, Object>();
     private Map<String, Object> resumptionResults = new HashMap<String, Object>();
     private int maxListSize;
@@ -74,18 +78,15 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
             throw new IllegalArgumentException("NewFileSystemOAICatalog. maxListSize is missing from the properties file");
         }
         maxListSize = Integer.parseInt(temp);
-        if (debug) {
-            System.out.println("in NewFileSystemOAICatalog(): maxListSize=" + maxListSize);
-        }
+
+        LOGGER.debug("in NewFileSystemOAICatalog(): maxListSize=" + maxListSize);
 
         homeDir = properties.getProperty("NewFileSystemOAICatalog.homeDir");
         if (homeDir == null) {
             throw new IllegalArgumentException("NewFileSystemOAICatalog. homeDir is missing from the properties file");
         }
-        if (debug) {
-            System.out.println("in NewFileSystemOAICatalog(): homeDir=" + homeDir);
-        }
 
+        LOGGER.debug("in NewFileSystemOAICatalog(): homeDir=" + homeDir);
 
         File homeFile = new File(homeDir);
         int homeDirLen = homeFile.getPath().length() + 1;
@@ -106,8 +107,7 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
         return new ArrayList<String>(treeMap.values());
     }
 
-    private void loadFileMap(int homeDirLen, File currentDir)
-            throws IOException {
+    private void loadFileMap(int homeDirLen, File currentDir) throws IOException {
         try {
             String[] list = currentDir.list();
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -118,7 +118,7 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
                     loadFileMap(homeDirLen, child);
                 } else if (isMetadataFile(child)) {
                     String path = file2path(homeDirLen, child);
-                    System.out.println("parsing " + path);
+                    LOGGER.debug("parsing " + path);
                     File file = localIdentifier2File(path);
                     FileInputStream fis = new FileInputStream(file);
                     InputSource data = new InputSource(fis);
@@ -130,11 +130,10 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
                     NodeList setNodes = XPathAPI.selectNodeList(doc, "/record/header/setSpec");
                     for (int j = 0; j < setNodes.getLength(); ++j) {
                         Node setSpecNode = setNodes.item(j);
-                        String setSpec = XPathAPI.eval(setSpecNode,
-                                "string()").str();
-                        ArrayList setSpecList = (ArrayList) setMap.get(setSpec);
+                        String setSpec = XPathAPI.eval(setSpecNode, "string()").str();
+                        List<String> setSpecList = (List<String>) setMap.get(setSpec);
                         if (setSpecList == null) {
-                            setSpecList = new ArrayList();
+                            setSpecList = new ArrayList<String>();
                             setMap.put(setSpec, setSpecList);
                         }
                         setSpecList.add(path);
@@ -142,7 +141,7 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new IOException(e.getMessage());
         }
     }
@@ -183,14 +182,12 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
     private Map<String, Object> getNativeHeader(String path) {
         Map<String, Object> recordMap = null;
         if (fileDateMap.containsKey(path)) {
-            recordMap = new HashMap();
+            recordMap = new HashMap<String, Object>();
             recordMap.put("localIdentifier", path.substring(0, path.lastIndexOf(".")));
             recordMap.put("lastModified", fileDateMap.get(path));
             List<String> setSpecs = new ArrayList<String>();
-            Iterator keySet = setMap.keySet().iterator();
-            while (keySet.hasNext()) {
-                String key = (String) keySet.next();
-                ArrayList identifierList = (ArrayList) setMap.get(key);
+            for (String key : setMap.keySet()) {
+                List<String> identifierList = (List<String>) setMap.get(key);
                 if (identifierList.contains(path)) {
                     setSpecs.add(key);
                 }
@@ -203,11 +200,9 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
 
     private List<String> getExtensionList(String localIdentifier) {
         List<String> list = new ArrayList<String>();
-        Iterator iterator = fileDateMap.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry entry = (Map.Entry) iterator.next();
-            if (((String) entry.getKey()).startsWith(localIdentifier)) {
-                list.add(((String) entry.getKey()).substring(localIdentifier.length() + 1));
+        for (Map.Entry<String, Object> entry : fileDateMap.entrySet()) {
+            if ((entry.getKey()).startsWith(localIdentifier)) {
+                list.add((entry.getKey()).substring(localIdentifier.length() + 1));
             }
         }
         return list;
@@ -240,16 +235,13 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
      * @param oaiIdentifier the OAI identifier
      * @param metadataPrefix the OAI metadataPrefix
      * @return the Record object containing the result.
-     * @throws CannotDisseminateFormatException signals an http status
-     * code 400 problem
-     * @throws IdDoesNotExistException signals an http status code 404
-     * problem
-     * @throws OAIInternalServerError signals an http status code 500
-     * problem
+     * @throws CannotDisseminateFormatException signals an http status code 400 problem
+     * @throws IdDoesNotExistException signals an http status code 404 problem
+     * @throws OAIInternalServerError signals an http status code 500 problem
      */
     public String getRecord(String oaiIdentifier, String metadataPrefix)
             throws IdDoesNotExistException, CannotDisseminateFormatException, OAIInternalServerError {
-        Map<String, Object> nativeItem = null;
+        Map<String, Object> nativeItem;
         try {
             String localIdentifier = getRecordFactory().fromOAIIdentifier(oaiIdentifier);
 
@@ -259,7 +251,7 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
             }
             return constructRecord(nativeItem, metadataPrefix);
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError("Database Failure");
         }
     }
@@ -278,7 +270,7 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
      * @return a List<String> containing schemaLocation Strings
      */
     public List<String> getSchemaLocations(String oaiIdentifier) throws IdDoesNotExistException, NoMetadataFormatsException {
-        List<String> extensionList = null;
+        List<String> extensionList;
         String localIdentifier = getRecordFactory().fromOAIIdentifier(oaiIdentifier);
         extensionList = getExtensionList(localIdentifier);
 
@@ -366,13 +358,10 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
     /**
      * Retrieve the next set of Identifiers associated with the resumptionToken
      *
-     * @param resumptionToken implementation-dependent format taken from the
-     * previous listIdentifiers() Map result.
-     * @return a Map object containing an optional "resumptionToken" key/value
-     *         pair and an "identifiers" Map object. The "identifiers" Map contains OAI
-     *         identifier keys with corresponding values of "true" or null depending on
+     * @param resumptionToken implementation-dependent format taken from the previous listIdentifiers() Map result.
+     * @return a Map object containing an optional "resumptionToken" key/value pair and an "identifiers" Map object.
+     *         The "identifiers" Map contains OAI identifier keys with corresponding values of "true" or null depending on
      *         whether the identifier is deleted or not.
-     *         problem
      */
     public Map<String, Object> listIdentifiers(String resumptionToken) throws BadResumptionTokenException {
         purge(); // clean out old resumptionTokens
@@ -403,7 +392,7 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
         /* Get some more records from your database */
         Iterator iterator = (Iterator) resumptionResults.remove(resumptionId);
         if (iterator == null) {
-            System.out.println("NewFileSystemOAICatalog.listIdentifiers: reuse of old resumptionToken?");
+            LOGGER.debug("NewFileSystemOAICatalog.listIdentifiers: reuse of old resumptionToken?");
             iterator = fileDateMap.entrySet().iterator();
             for (int i = 0; i < oldCount; ++i) {
                 iterator.next();
@@ -494,7 +483,7 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
      *
      * @return an Iterator containing the list of about values for this nativeItem
      */
-    private Iterator getAbouts(Map<String, Object> nativeItem) {
+    private Iterator<String> getAbouts(Map<String, Object> nativeItem) {
         return null;
     }
 
@@ -507,9 +496,8 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
      * date is desired
      * @param set set name or null if no set is desired
      * @param metadataPrefix the OAI metadataPrefix
-     * @return a Map object containing an optional "resumptionToken" key/value
-     *         pair and a "records" Iterator object. The "records" Iterator contains a
-     *         set of Records objects.
+     * @return a Map object containing an optional "resumptionToken" key/value pair and a "records" Iterator object.
+     *         The "records" Iterator contains a set of Records objects.
      * @throws OAIInternalServerError signals an http status code 500 problem
      */
     public Map<String, Object> listRecords(String from, String until, String set, String metadataPrefix)
@@ -526,17 +514,15 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
             String fileDate = (String) entryDateMap.getValue();
             String path = (String) entryDateMap.getKey();
             String extension = path.substring(path.lastIndexOf(".") + 1);
-            if (fileDate.compareTo(from) >= 0
-                    && fileDate.compareTo(until) <= 0
-                    && extension.equals(metadataPrefix)
-                    && (setIdentifiers == null || setIdentifiers.contains(path))) {
+            if (fileDate.compareTo(from) >= 0 && fileDate.compareTo(until) <= 0
+                    && extension.equals(metadataPrefix) && (setIdentifiers == null || setIdentifiers.contains(path))) {
                 try {
                     Map<String, Object> nativeItem = getNativeRecord((String) entryDateMap.getKey());
                     String record = constructRecord(nativeItem, metadataPrefix);
                     records.add(record);
                     count++;
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOGGER.error("An Exception occured", e);
                     throw new OAIInternalServerError(e.getMessage());
                 }
             }
@@ -580,12 +566,9 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
     /**
      * Retrieve the next set of records associated with the resumptionToken
      *
-     * @param resumptionToken implementation-dependent format taken from the
-     * previous listRecords() Map result.
-     * @return a Map object containing an optional "resumptionToken" key/value
-     *         pair and a "records" Iterator object. The "records" Iterator contains a
-     *         set of Records objects.
-     * problem
+     * @param resumptionToken implementation-dependent format taken from the previous listRecords() Map result.
+     * @return a Map object containing an optional "resumptionToken" key/value pair and a "records" Iterator object.
+     *         The "records" Iterator contains a set of Records objects.
      */
     public Map<String, Object> listRecords(String resumptionToken) throws BadResumptionTokenException {
         purge(); // clean out old resumptionTokens
@@ -615,7 +598,7 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
         /* Get some more records from your database */
         Iterator iterator = (Iterator) resumptionResults.remove(resumptionId);
         if (iterator == null) {
-            System.out.println("NewFileSystemOAICatalog.listRecords: reuse of old resumptionToken?");
+            LOGGER.debug("NewFileSystemOAICatalog.listRecords: reuse of old resumptionToken?");
             iterator = fileDateMap.entrySet().iterator();
             for (int i = 0; i < oldCount; ++i) {
                 iterator.next();
@@ -668,11 +651,7 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
              * resumptionToken attributes in the response. Otherwise, use the
              * line after it that I've commented out.
              *****************************************************************/
-            listRecordsMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(),
-                    numRows,
-                    oldCount));
-            //          listRecordsMap.put("resumptionMap",
-            //                                 getResumptionMap(resumptionTokenSb.toString()));
+            listRecordsMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(), numRows, oldCount));
         }
 
         listRecordsMap.put("records", records.iterator());
@@ -704,19 +683,14 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
     private void purge() {
         List<String> old = new ArrayList<String>();
         Date then, now = new Date();
-        Iterator keySet = resumptionResults.keySet().iterator();
-        String key;
 
-        while (keySet.hasNext()) {
-            key = (String) keySet.next();
+        for (String key : resumptionResults.keySet()) {
             then = new Date(Long.parseLong(key) + getMillisecondsToLive());
             if (now.after(then)) {
                 old.add(key);
             }
         }
-        Iterator iterator = old.iterator();
-        while (iterator.hasNext()) {
-            key = (String) iterator.next();
+        for (String key : old) {
             resumptionResults.remove(key);
         }
     }

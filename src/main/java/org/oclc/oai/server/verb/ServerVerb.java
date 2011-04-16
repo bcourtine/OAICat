@@ -28,6 +28,8 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
 import org.oclc.oai.util.OAIUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 //import javax.servlet.http.HttpUtils;
 
 /**
@@ -36,22 +38,22 @@ import org.oclc.oai.util.OAIUtil;
  * @author Jefffrey A. Young, OCLC Online Computer Library Center
  */
 public abstract class ServerVerb {
-    private static final boolean debug = false;
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(ServerVerb.class);
 
     private int statusCode = HttpServletResponse.SC_OK; // http status
     private String message = null; // http response message
 
-    /**
-     * Complete XML response String
-     */
+    /** Complete XML response String */
     protected String xmlText = null;
 
-    /**
-     * Constructor
-     */
-    protected ServerVerb() { }
+    /** Constructor */
+    protected ServerVerb() {
+    }
 
-    public static void init(Properties properties) throws Exception {}
+    public static void init(Properties properties) throws Exception {
+    }
 
     /**
      * initialize the Verb from the specified xml text
@@ -59,9 +61,7 @@ public abstract class ServerVerb {
      * @param xmlText complete XML response string
      */
     protected void init(String xmlText) {
-        if (debug) {
-            System.out.println("ServerVerb.init: xmlText=" + xmlText);
-        }
+        LOGGER.debug("ServerVerb.init: xmlText=" + xmlText);
         this.xmlText = xmlText;
     }
 
@@ -79,14 +79,18 @@ public abstract class ServerVerb {
      *
      * @return the http status code;
      */
-    public int getStatus() { return statusCode; }
+    public int getStatus() {
+        return statusCode;
+    }
 
     /**
      * Retrieve the http status message
      *
      * @return the http status message;
      */
-    public String getMessage() { return message; }
+    public String getMessage() {
+        return message;
+    }
 
     /**
      * set the http status code and message
@@ -123,7 +127,7 @@ public abstract class ServerVerb {
         sb.append("<request");
         Enumeration params = request.getParameterNames();
         while (params.hasMoreElements()) {
-            String name = (String)params.nextElement();
+            String name = (String) params.nextElement();
             if (validParamNames.contains(name)) {
                 String value = request.getParameter(name);
                 if (value != null && value.length() > 0) {
@@ -149,7 +153,7 @@ public abstract class ServerVerb {
             Iterator requiredParamNames,
             List validParamNames) {
         while (requiredParamNames.hasNext()) {
-            String name = (String)requiredParamNames.next();
+            String name = (String) requiredParamNames.next();
             String value = request.getParameter(name);
             if (value == null || value.length() == 0) {
                 return true;
@@ -157,7 +161,7 @@ public abstract class ServerVerb {
         }
         Enumeration params = request.getParameterNames();
         while (params.hasMoreElements()) {
-            String name = (String)params.nextElement();
+            String name = (String) params.nextElement();
             if (!validParamNames.contains(name)) {
                 return true;
             } else if (request.getParameterValues(name).length > 1) {
@@ -219,29 +223,25 @@ public abstract class ServerVerb {
         String propertyPrefix = "ExtensionVerbs.";
         Enumeration propNames = properties.propertyNames();
         while (propNames.hasMoreElements()) {
-            String propertyName = (String)propNames.nextElement();
+            String propertyName = (String) propNames.nextElement();
             if (propertyName.startsWith(propertyPrefix)) {
                 String verb = propertyName.substring(propertyPrefix.length());
-                String verbClassName = (String)properties.get(propertyName);
-                if (debug) {
-                    System.out.println("ExtensionVerb.getVerbs: verb=" + verb);
-                    System.out.println("ExtensionVerb.verbClassName=" + verbClassName);
-                }
+                String verbClassName = (String) properties.get(propertyName);
+                LOGGER.debug("ExtensionVerb.getVerbs: verb=" + verb);
+                LOGGER.debug("ExtensionVerb.verbClassName=" + verbClassName);
                 try {
                     Class serverVerbClass = Class.forName(verbClassName);
-                    Method init = serverVerbClass.getMethod("init", new Class[] {Properties.class});
+                    Method init = serverVerbClass.getMethod("init", new Class[]{Properties.class});
                     try {
                         init.invoke(null, properties);
                     } catch (InvocationTargetException e) {
                         throw e.getTargetException();
                     }
                     extensionVerbsMap.put(verb, serverVerbClass);
-                    if (debug) {
-                        System.out.println("ExtensionVerb.getVerbs: " + verb + "=" + verbClassName);
-                    }
+                    LOGGER.debug("ExtensionVerb.getVerbs: " + verb + "=" + verbClassName);
+
                 } catch (Throwable e) {
-                    System.err.println("ExtensionVerb: couldn't construct: " + verbClassName);
-                    e.printStackTrace();
+                    LOGGER.error("ExtensionVerb: couldn't construct: " + verbClassName, e);
                 }
             }
         }

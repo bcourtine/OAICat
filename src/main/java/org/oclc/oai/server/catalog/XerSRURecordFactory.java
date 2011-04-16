@@ -19,49 +19,40 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.TransformerException;
 
 import org.apache.xpath.XPathAPI;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-/**
- * NodeRecordFactory converts native XML "items" to "record" Strings.
- */
+/** NodeRecordFactory converts native XML "items" to "record" Strings. */
 public class XerSRURecordFactory extends RecordFactory {
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(XerSRURecordFactory.class);
 
     private static Element xmlnsEl = null;
     private static DocumentBuilderFactory factory = null;
+
     static {
         try {
-            factory =
-                DocumentBuilderFactory.newInstance();
+            factory = DocumentBuilderFactory.newInstance();
             factory.setNamespaceAware(true);
             DocumentBuilder builder = factory.newDocumentBuilder();
             DOMImplementation impl = builder.getDOMImplementation();
-            Document xmlnsDoc =
-                impl.createDocument(
-                        "http://www.oclc.org/research/software/oai/harvester",
-                        "harvester:xmlnsDoc",
-                        null);
+            Document xmlnsDoc = impl.createDocument("http://www.oclc.org/research/software/oai/harvester", "harvester:xmlnsDoc", null);
             xmlnsEl = xmlnsDoc.getDocumentElement();
-            xmlnsEl.setAttributeNS("http://www.w3.org/2000/xmlns/",
-                    "xmlns:xsd",
-            "http://www.w3.org/2001/XMLSchema");
-            xmlnsEl.setAttributeNS("http://www.w3.org/2000/xmlns/",
-                    "xmlns:srw",
-            "http://www.loc.gov/zing/srw/");
-            xmlnsEl.setAttributeNS("http://www.w3.org/2000/xmlns/",
-                    "xmlns:oai",
-            "http://www.openarchives.org/OAI/2.0/");
-            xmlnsEl.setAttributeNS("http://www.w3.org/2000/xmlns/",
-                    "xmlns:explain",
-            "http://explain.z3950.org/dtd/2.0/");
+            xmlnsEl.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:xsd", "http://www.w3.org/2001/XMLSchema");
+            xmlnsEl.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:srw", "http://www.loc.gov/zing/srw/");
+            xmlnsEl.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:oai", "http://www.openarchives.org/OAI/2.0/");
+            xmlnsEl.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:explain", "http://explain.z3950.org/dtd/2.0/");
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
         }
     }
 
     public XerSRURecordFactory(Properties properties)
-    throws IllegalArgumentException {
+            throws IllegalArgumentException {
         super(properties);
 //        this(properties, getCrosswalkMap(properties.getProperty("SRUOAICatalog.sruURL")));
     }
@@ -69,70 +60,15 @@ public class XerSRURecordFactory extends RecordFactory {
     /**
      * Construct an NodeRecordFactory capable of producing the Crosswalk(s)
      * specified in the properties file.
+     *
      * @param properties Contains information to configure the factory:
-     *                   specifically, the names of the crosswalk(s) supported
-     * @exception IllegalArgumentException Something is wrong with the argument.
+     * specifically, the names of the crosswalk(s) supported
+     * @throws IllegalArgumentException Something is wrong with the argument.
      */
     public XerSRURecordFactory(Properties properties, HashMap crosswalkMap)
-    throws IllegalArgumentException {
+            throws IllegalArgumentException {
         super(crosswalkMap);
     }
-
-//    private static HashMap getCrosswalkMap(String sruURL)
-//    throws IllegalArgumentException {
-//        try {
-//            DocumentBuilder parser = factory.newDocumentBuilder();
-//            Document explainDoc = parser.parse(sruURL);
-//            NodeList schemas = XPathAPI.selectNodeList(explainDoc, "/srw:explainResponse/srw:record/srw:recordData/explain:explain/explain:schemaInfo/explain:schema", xmlnsEl);
-//
-//            // Load the formats the repository supports directly
-//            Map<String, Object> crosswalkMap = new HashMap<String, Object>();
-//            for (int i=0; i<schemas.getLength(); ++i) {
-//                Object[] crosswalkItem = crosswalkItemFactory(schemas.item(i));
-//                for (int j=0; j<crosswalkItem.length; ++j) {
-//                    CrosswalkItem currentItem = (CrosswalkItem)crosswalkItem[j];
-//                    // 		logger.debug(currentItem.toString());
-//                    Object key = currentItem.getMetadataPrefix();
-//                    CrosswalkItem storedItem = (CrosswalkItem)crosswalkMap.get(key);
-//                    if (storedItem == null || (currentItem.getRank() < storedItem.getRank())) {
-//                        crosswalkMap.put(key, currentItem);
-//                    }
-//                }
-//            }
-//
-//            Map<String, Object> moreCrosswalkMap = new HashMap<String, Object>();
-//
-//            // Now, combine the lists with the originals taking precidence
-//            moreCrosswalkMap.putAll(crosswalkMap);
-//            return moreCrosswalkMap;
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            throw new IllegalArgumentException(sruURL);
-//        }
-//    }
-
-//    public static Object[] crosswalkItemFactory(Node explainSchemaNode)
-//    throws TransformerException, OAIInternalServerError {
-//        List<String> crosswalkItemList = new ArrayList<String>();
-//        String nativeRecordSchema = XPathAPI.eval(explainSchemaNode, "@identifier", xmlnsEl).str();
-//        String metadataPrefix = XPathAPI.eval(explainSchemaNode, "@name", xmlnsEl).str();
-//        String schema = XPathAPI.eval(explainSchemaNode, "@location", xmlnsEl).str();
-//        String metadataNamespace = null;
-//        try {
-//            DocumentBuilder parser = factory.newDocumentBuilder();
-//            Document schemaDoc = parser.parse(schema);
-//            metadataNamespace = XPathAPI.eval(schemaDoc, "/xsd:schema/@targetNamespace", xmlnsEl).str();
-//        } catch (SAXParseException e) {
-//            metadataNamespace = "";
-//        } catch (Exception e) {
-//            System.out.println("Failed to get schema: " + schema);
-//            e.printStackTrace();
-//            metadataNamespace = "";
-//        }
-//        CrosswalkItem crosswalkItem = new CrosswalkItem(nativeRecordSchema, metadataPrefix, schema, metadataNamespace, NodePassThruCrosswalk.class);
-//        crosswalkItemList.add(crosswalkItem);
-//        return crosswalkItemList.toArray();
-//    }
 
     /**
      * Utility method to parse the 'local identifier' from the OAI identifier
@@ -162,18 +98,10 @@ public class XerSRURecordFactory extends RecordFactory {
      */
     public String getLocalIdentifier(Object nativeItem) {
         try {
-            Element recordEl = (Element)nativeItem;
-//            Node identifierNode =
-//                XPathAPI.selectSingleNode(
-//                        recordEl,
-//                        "/oai:header/oai:identifier",
-//                        xmlnsEl);
-//            if (identifierNode != null) {
-//                return XPathAPI.eval(identifierNode, "string()").str();
-//            }
+            Element recordEl = (Element) nativeItem;
             return "foo";
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
         }
         return null;
     }
@@ -183,10 +111,10 @@ public class XerSRURecordFactory extends RecordFactory {
      *
      * @param nativeItem a native item presumably containing a datestamp somewhere
      * @return a String containing the datestamp for the item
-     * @exception IllegalArgumentException Something is wrong with the argument.
+     * @throws IllegalArgumentException Something is wrong with the argument.
      */
     public String getDatestamp(Object nativeItem)
-    throws IllegalArgumentException {
+            throws IllegalArgumentException {
         Element recordData = (Element) nativeItem;
         try {
             String datetime = XPathAPI.eval(recordData,
@@ -195,8 +123,7 @@ public class XerSRURecordFactory extends RecordFactory {
                     .str();
             return datetime;
         } catch (TransformerException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
         }
         return null;
     }
@@ -206,14 +133,9 @@ public class XerSRURecordFactory extends RecordFactory {
      *
      * @param nativeItem a native item presumably containing a setspec somewhere
      * @return a String containing the setspec for the item
-     * @exception IllegalArgumentException Something is wrong with the argument.
+     * @throws IllegalArgumentException Something is wrong with the argument.
      */
-    public Iterator getSetSpecs(Object nativeItem)
-    throws IllegalArgumentException {
-        //         List setSpecs = (List)((HashMap)nativeItem).get("setSpecs");
-        //         if (setSpecs != null) 
-        //             return setSpecs.iterator();
-        //         else
+    public Iterator getSetSpecs(Object nativeItem) throws IllegalArgumentException {
         return null;
     }
 
@@ -222,10 +144,9 @@ public class XerSRURecordFactory extends RecordFactory {
      *
      * @param nativeItem a native item presumably containing about information somewhere
      * @return a Iterator of Strings containing &lt;about&gt;s for the item
-     * @exception IllegalArgumentException Something is wrong with the argument.
+     * @throws IllegalArgumentException Something is wrong with the argument.
      */
-    public Iterator getAbouts(Object nativeItem)
-    throws IllegalArgumentException {
+    public Iterator getAbouts(Object nativeItem) throws IllegalArgumentException {
         return null;
     }
 
@@ -234,10 +155,9 @@ public class XerSRURecordFactory extends RecordFactory {
      *
      * @param nativeItem a native item presumably containing a possible delete indicator
      * @return true if record is deleted, false if not
-     * @exception IllegalArgumentException Something is wrong with the argument.
+     * @throws IllegalArgumentException Something is wrong with the argument.
      */
-    public boolean isDeleted(Object nativeItem)
-    throws IllegalArgumentException {
+    public boolean isDeleted(Object nativeItem) throws IllegalArgumentException {
         return false;
     }
 
@@ -246,15 +166,11 @@ public class XerSRURecordFactory extends RecordFactory {
      * This is useful, for example, if the entire &lt;record&gt; is already packaged as the native
      * record. Return null if you want the default handler to create it by calling the methods
      * above individually.
-     * 
+     *
      * @param nativeItem the native record
-     * @return a String containing the OAI &lt;record&gt; or null if the default method should be
-     * used.
+     * @return a String containing the OAI &lt;record&gt; or null if the default method should be used.
      */
-    public String quickCreate(
-            Object nativeItem,
-            String schemaLocation,
-            String metadataPrefix) {
+    public String quickCreate(Object nativeItem, String schemaLocation, String metadataPrefix) {
         return null;
     }
 }

@@ -18,6 +18,8 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamSource;
 
 import org.oclc.oai.server.verb.OAIInternalServerError;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Convert native "item" to xsd. In this case, the native "item"
@@ -27,17 +29,18 @@ import org.oclc.oai.server.verb.OAIInternalServerError;
  * involves pulling out the one that is requested.
  */
 public class Copyxsd extends XSLTCrosswalk {
-//    private Transformer transformer = null;
-    
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(Copyxsd.class);
+
     /**
      * The constructor assigns the schemaLocation associated with this crosswalk. Since
      * the crosswalk is trivial in this case, no properties are utilized.
      *
      * @param properties properties that are needed to configure the crosswalk.
      */
-    public Copyxsd(Properties properties)
-        throws OAIInternalServerError {
- 	super(properties, "http://www.w3.org/2001/XMLSchema http://www.w3.org/2001/XMLSchema.xsd", null);
+    public Copyxsd(Properties properties) throws OAIInternalServerError {
+        super(properties, "http://www.w3.org/2001/XMLSchema http://www.w3.org/2001/XMLSchema.xsd", null);
         try {
             String xsltName = properties.getProperty("Copyxsd.xsltName");
             if (xsltName != null) {
@@ -46,18 +49,19 @@ public class Copyxsd extends XSLTCrosswalk {
                 this.transformer = tFactory.newTransformer(xslSource);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }
-    
+
     /**
      * Can this nativeItem be represented in DC format?
+     *
      * @param nativeItem a record in native format
      * @return true if DC format is possible, false otherwise.
      */
     public boolean isAvailableFor(Object nativeItem) {
-        ArrayList list = (ArrayList)nativeItem;
+        ArrayList list = (ArrayList) nativeItem;
         return list.contains("xsd");
     }
 }

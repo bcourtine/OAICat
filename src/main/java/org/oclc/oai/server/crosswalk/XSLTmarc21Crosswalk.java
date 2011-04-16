@@ -17,6 +17,8 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamSource;
 
 import org.oclc.oai.server.verb.OAIInternalServerError;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Convert native "item" to marc21. In this case, the native "item"
@@ -26,30 +28,29 @@ import org.oclc.oai.server.verb.OAIInternalServerError;
  * involves pulling out the one that is requested.
  */
 public class XSLTmarc21Crosswalk extends XSLTCrosswalk {
-    private boolean debug = false;
-//     private Transformer transformer = null;
-    
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(XSLTmarc21Crosswalk.class);
+
     /**
      * The constructor assigns the schemaLocation associated with this crosswalk. Since
      * the crosswalk is trivial in this case, no properties are utilized.
      *
      * @param properties properties that are needed to configure the crosswalk.
      */
-    public XSLTmarc21Crosswalk(Properties properties)
-        throws OAIInternalServerError {
- 	super(properties, "http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd", null);
-        String temp = properties.getProperty("XSLTmarc21Crosswalk.debug");
-        if ("true".equals(temp)) debug = true;
+    public XSLTmarc21Crosswalk(Properties properties) throws OAIInternalServerError {
+        super(properties, "http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd", null);
+
         try {
             String xsltName = properties.getProperty("XSLTmarc21Crosswalk.xsltName");
-            if (debug) System.out.println("XSLTmarc21Crosswalk.xsltName=" + xsltName);
+            LOGGER.debug("XSLTmarc21Crosswalk.xsltName=" + xsltName);
             if (xsltName != null) {
                 StreamSource xslSource = new StreamSource(new FileInputStream(xsltName));
                 TransformerFactory tFactory = TransformerFactory.newInstance();
                 this.transformer = tFactory.newTransformer(xslSource);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }

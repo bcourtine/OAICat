@@ -25,6 +25,8 @@ import javax.xml.transform.stream.StreamSource;
 
 import org.oclc.oai.server.verb.CannotDisseminateFormatException;
 import org.oclc.oai.server.verb.OAIInternalServerError;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Convert native "item" to oai_dc. In this case, the native "item"
@@ -34,35 +36,39 @@ import org.oclc.oai.server.verb.OAIInternalServerError;
  * involves pulling out the one that is requested.
  */
 public class FileMap2oai_dc extends Crosswalk {
+
+    /** Class logger. */
+    private static final Logger LOGGER = LoggerFactory.getLogger(FileMap2oai_dc.class);
+
     private Transformer transformer = null;
-    
+
     /**
      * The constructor assigns the schemaLocation associated with this crosswalk. Since
      * the crosswalk is trivial in this case, no properties are utilized.
      *
      * @param properties properties that are needed to configure the crosswalk.
      */
-    public FileMap2oai_dc(Properties properties)
-        throws OAIInternalServerError {
-	super("http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd");
+    public FileMap2oai_dc(Properties properties) throws OAIInternalServerError {
+        super("http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd");
         try {
             String xsltName = properties.getProperty("FileMap2oai_dc.xsltName");
-	    TransformerFactory tFactory = TransformerFactory.newInstance();
-	    if (xsltName != null) {
-		StreamSource xslSource = new StreamSource(new FileInputStream(xsltName));
-		this.transformer = tFactory.newTransformer(xslSource);
-	    } else {
-		this.transformer = tFactory.newTransformer();
+            TransformerFactory tFactory = TransformerFactory.newInstance();
+            if (xsltName != null) {
+                StreamSource xslSource = new StreamSource(new FileInputStream(xsltName));
+                this.transformer = tFactory.newTransformer(xslSource);
+            } else {
+                this.transformer = tFactory.newTransformer();
                 this.transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-	    }
+            }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("An Exception occured", e);
             throw new OAIInternalServerError(e.getMessage());
         }
     }
 
     /**
      * Can this nativeItem be represented in DC format?
+     *
      * @param nativeItem a record in native format
      * @return true if DC format is possible, false otherwise.
      */
@@ -78,16 +84,15 @@ public class FileMap2oai_dc extends Crosswalk {
      * possible exception that multiple metadataFormats are
      * present in the <metadata> element.
      * @return a String containing the FileMap to be stored within the <metadata> element.
-     * @exception CannotDisseminateFormatException nativeItem doesn't support this format.
+     * @throws CannotDisseminateFormatException nativeItem doesn't support this format.
      */
-    public String createMetadata(Object nativeItem)
-	throws CannotDisseminateFormatException {
-	Map<String, Object> recordMap = (HashMap)nativeItem;
+    public String createMetadata(Object nativeItem) throws CannotDisseminateFormatException {
+        Map<String, Object> recordMap = (Map<String, Object>) nativeItem;
         try {
-            String xmlRec = (new String((byte[])recordMap.get("recordBytes"), "UTF-8")).trim();
+            String xmlRec = (new String((byte[]) recordMap.get("recordBytes"), "UTF-8")).trim();
             if (xmlRec.startsWith("<?")) {
                 int offset = xmlRec.indexOf("?>");
-                xmlRec = xmlRec.substring(offset+2);
+                xmlRec = xmlRec.substring(offset + 2);
             }
             StringReader stringReader = new StringReader(xmlRec);
             StreamSource streamSource = new StreamSource(stringReader);
