@@ -11,6 +11,7 @@
 package org.oclc.oai.server.crosswalk;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 import org.oclc.oai.util.OAIUtil;
@@ -85,8 +86,8 @@ public class JDBC2oai_dc extends Crosswalk {
      * @return a String containing the XML to be stored within the <metadata> element.
      */
     public String createMetadata(Object nativeItem) {
-        HashMap table = (HashMap)nativeItem;
-        StringBuffer sb = new StringBuffer();
+        Map<String, Object> table = (HashMap)nativeItem;
+        StringBuilder sb = new StringBuilder();
         sb.append("<oai_dc:dc xmlns:oai_dc=\"http://www.openarchives.org/OAI/2.0/oai_dc/\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\""
                 + getSchemaLocation()
                 + "\">\n");
@@ -111,8 +112,8 @@ public class JDBC2oai_dc extends Crosswalk {
         return sb.toString();
     }
     
-    private String getElements(HashMap table, String jdbcLabel, String elementLabel) {
-        StringBuffer sb = new StringBuffer();
+    private String getElements(Map<String, Object> table, String jdbcLabel, String elementLabel) {
+        StringBuilder sb = new StringBuilder();
         Object jdbcObject;
         if (jdbcLabel != null
                 && (jdbcObject = table.get(jdbcLabel)) != null

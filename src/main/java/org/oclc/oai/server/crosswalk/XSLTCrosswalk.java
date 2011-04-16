@@ -14,6 +14,7 @@ import java.io.FileInputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 import javax.xml.transform.OutputKeys;
@@ -103,7 +104,7 @@ public class XSLTCrosswalk extends Crosswalk {
         try {
             String xmlRec = null;
             if (nativeItem instanceof HashMap) {
-                HashMap recordMap = (HashMap)nativeItem;
+                Map<String, Object> recordMap = (HashMap)nativeItem;
                 xmlRec = (String)recordMap.get("recordString");
                 if (xmlRec == null) {
                     xmlRec = new String((byte[])recordMap.get("recordBytes"), "UTF-8");

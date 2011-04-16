@@ -10,10 +10,7 @@
  */
 package org.oclc.oai.server.verb;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Properties;
+import java.util.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -31,61 +28,63 @@ import org.oclc.oai.server.crosswalk.Crosswalks;
  */
 public class GetRecord extends ServerVerb {
     private static final boolean debug = false;
-    private static ArrayList validParamNames = new ArrayList();
+    private static List<String> validParamNames = new ArrayList<String>();
+
     static {
-	validParamNames.add("verb");
-	validParamNames.add("identifier");
-	validParamNames.add("metadataPrefix");
+        validParamNames.add("verb");
+        validParamNames.add("identifier");
+        validParamNames.add("metadataPrefix");
     }
-    
+
     /**
      * Construct the xml response on the server-side.
      *
      * @param context the servlet context
      * @param request the servlet request
      * @return a String containing the XML response
-     * @exception OAIBadRequestException an http 400 status error occurred
-     * @exception OAINotFoundException an http 404 status error occurred
-     * @exception OAIInternalServerError an http 500 status error occurred
+     * @throws OAIBadRequestException an http 400 status error occurred
+     * @throws OAINotFoundException an http 404 status error occurred
+     * @throws OAIInternalServerError an http 500 status error occurred
      */
     public static String construct(HashMap context,
-                                   HttpServletRequest request,
-                                   HttpServletResponse response,
-                                   Transformer serverTransformer)
-        throws OAIInternalServerError, TransformerException {
-        Properties properties = (Properties)context.get("OAIHandler.properties");
-	AbstractCatalog abstractCatalog =
-	    (AbstractCatalog)context.get("OAIHandler.catalog");
-	String baseURL = properties.getProperty("OAIHandler.baseURL");
-	if (baseURL == null) {
-	    try {
-		baseURL = request.getRequestURL().toString();
-	    } catch (java.lang.NoSuchMethodError f) {
-		baseURL = request.getRequestURL().toString();
-	    }
-	}
-        StringBuffer sb = new StringBuffer();
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Transformer serverTransformer)
+            throws OAIInternalServerError, TransformerException {
+        Properties properties = (Properties) context.get("OAIHandler.properties");
+        AbstractCatalog abstractCatalog =
+                (AbstractCatalog) context.get("OAIHandler.catalog");
+        String baseURL = properties.getProperty("OAIHandler.baseURL");
+        if (baseURL == null) {
+            try {
+                baseURL = request.getRequestURL().toString();
+            } catch (java.lang.NoSuchMethodError f) {
+                baseURL = request.getRequestURL().toString();
+            }
+        }
+        StringBuilder sb = new StringBuilder();
         String identifier = request.getParameter("identifier");
         String metadataPrefix = request.getParameter("metadataPrefix");
 
         if (debug) {
             System.out.println("GetRecord.constructGetRecord: identifier=" +
-                               identifier);
+                    identifier);
             System.out.println("GetRecord.constructGetRecord: metadataPrefix="
-                               + metadataPrefix);
+                    + metadataPrefix);
         }
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>");
-	String styleSheet = properties.getProperty("OAIHandler.styleSheet");
-	if (styleSheet != null) {
-	    sb.append("<?xml-stylesheet type=\"text/xsl\" href=\"");
-	    sb.append(styleSheet);
-	    sb.append("\"?>");
-	}
+        String styleSheet = properties.getProperty("OAIHandler.styleSheet");
+        if (styleSheet != null) {
+            sb.append("<?xml-stylesheet type=\"text/xsl\" href=\"");
+            sb.append(styleSheet);
+            sb.append("\"?>");
+        }
         sb.append("<OAI-PMH xmlns=\"http://www.openarchives.org/OAI/2.0/\"");
         sb.append(" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"");
-	String extraXmlns = properties.getProperty("OAIHandler.extraXmlns");
-	if (extraXmlns != null)
-	    sb.append(" ").append(extraXmlns);
+        String extraXmlns = properties.getProperty("OAIHandler.extraXmlns");
+        if (extraXmlns != null) {
+            sb.append(" ").append(extraXmlns);
+        }
         sb.append(" xsi:schemaLocation=\"http://www.openarchives.org/OAI/2.0/");
         sb.append(" http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd\">");
         sb.append("<responseDate>");
@@ -95,37 +94,36 @@ public class GetRecord extends ServerVerb {
 //         sb.append(getRequestURL(request));
 //         sb.append("</requestURL>");
         Crosswalks crosswalks = abstractCatalog.getCrosswalks();
-	try {
-	    if (metadataPrefix == null || metadataPrefix.length() == 0
-		|| identifier == null || identifier.length() == 0
-		|| hasBadArguments(request, validParamNames.iterator(), validParamNames)) {
-		throw new BadArgumentException();
-	    }
-	    else if (!crosswalks.containsValue(metadataPrefix)) {
-		throw new CannotDisseminateFormatException(metadataPrefix);
-	    } else {
-		String record = abstractCatalog.getRecord(identifier, metadataPrefix);
-		if (record != null) {
-		    sb.append(getRequestElement(request, validParamNames, baseURL));
-		    sb.append("<GetRecord>");
-		    sb.append(record);
-		    sb.append("</GetRecord>");
-		} else {
-		    throw new IdDoesNotExistException(identifier);
-		}
-	    }
-	} catch (BadArgumentException e) {
-	    sb.append("<request verb=\"GetRecord\">");
-	    sb.append(baseURL);
-	    sb.append("</request>");
-	    sb.append(e.getMessage());
-	} catch (CannotDisseminateFormatException e) {
-	    sb.append(getRequestElement(request, validParamNames, baseURL));
-	    sb.append(e.getMessage());
-	} catch (IdDoesNotExistException e) {
-	    sb.append(getRequestElement(request, validParamNames, baseURL));
-	    sb.append(e.getMessage());
-	}
+        try {
+            if (metadataPrefix == null || metadataPrefix.length() == 0
+                    || identifier == null || identifier.length() == 0
+                    || hasBadArguments(request, validParamNames.iterator(), validParamNames)) {
+                throw new BadArgumentException();
+            } else if (!crosswalks.containsValue(metadataPrefix)) {
+                throw new CannotDisseminateFormatException(metadataPrefix);
+            } else {
+                String record = abstractCatalog.getRecord(identifier, metadataPrefix);
+                if (record != null) {
+                    sb.append(getRequestElement(request, validParamNames, baseURL));
+                    sb.append("<GetRecord>");
+                    sb.append(record);
+                    sb.append("</GetRecord>");
+                } else {
+                    throw new IdDoesNotExistException(identifier);
+                }
+            }
+        } catch (BadArgumentException e) {
+            sb.append("<request verb=\"GetRecord\">");
+            sb.append(baseURL);
+            sb.append("</request>");
+            sb.append(e.getMessage());
+        } catch (CannotDisseminateFormatException e) {
+            sb.append(getRequestElement(request, validParamNames, baseURL));
+            sb.append(e.getMessage());
+        } catch (IdDoesNotExistException e) {
+            sb.append(getRequestElement(request, validParamNames, baseURL));
+            sb.append(e.getMessage());
+        }
         sb.append("</OAI-PMH>");
         return render(response, "text/xml; charset=UTF-8", sb.toString(), serverTransformer);
     }

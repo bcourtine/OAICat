@@ -14,6 +14,7 @@ import java.io.FileInputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 import javax.xml.transform.OutputKeys;
@@ -81,7 +82,7 @@ public class FileMap2oai_dc extends Crosswalk {
      */
     public String createMetadata(Object nativeItem)
 	throws CannotDisseminateFormatException {
-	HashMap recordMap = (HashMap)nativeItem;
+	Map<String, Object> recordMap = (HashMap)nativeItem;
         try {
             String xmlRec = (new String((byte[])recordMap.get("recordBytes"), "UTF-8")).trim();
             if (xmlRec.startsWith("<?")) {

@@ -15,15 +15,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Properties;
-import java.util.StringTokenizer;
-import java.util.TreeMap;
-import java.util.Vector;
+import java.util.*;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -57,13 +49,13 @@ public class XerSRUOAICatalog extends AbstractCatalog {
     private String sruURL;
     private String sortKeys = "";
     protected int maxListSize;
-    private TreeMap sets = null;
+    private Map<String, String> sets = null;
     private static TransformerFactory transformerFactory = TransformerFactory.newInstance();
     private static Transformer transformer = null;
-    private static HashMap builderMap = new HashMap();
+    private static Map<Thread, Object> builderMap = new HashMap<Thread, Object>();
     private static Element xmlnsEl = null;
     private static DocumentBuilderFactory factory =
-        DocumentBuilderFactory.newInstance();
+            DocumentBuilderFactory.newInstance();
 
     static {
         try {
@@ -72,12 +64,12 @@ public class XerSRUOAICatalog extends AbstractCatalog {
             DocumentBuilder builder = getBuilder();
             DOMImplementation impl = builder.getDOMImplementation();
             Document xmlnsDoc
-            = impl.createDocument("http://www.oclc.org/research/software/oai/harvester",
+                    = impl.createDocument("http://www.oclc.org/research/software/oai/harvester",
                     "harvester:xmlnsDoc", null);
             xmlnsEl = xmlnsDoc.getDocumentElement();
             xmlnsEl.setAttributeNS("http://www.w3.org/2000/xmlns/",
                     "xmlns:srw",
-            "http://www.loc.gov/zing/srw/");
+                    "http://www.loc.gov/zing/srw/");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -89,10 +81,12 @@ public class XerSRUOAICatalog extends AbstractCatalog {
 
     public XerSRUOAICatalog(Properties properties, String sruURL) {
         sortKeys = properties.getProperty("SRUOAICatalog.sortKeys");
-        if (sortKeys == null) sortKeys = "";
+        if (sortKeys == null) {
+            sortKeys = "";
+        }
 
         String maxListSize =
-            properties.getProperty("SRUOAICatalog.maxListSize");
+                properties.getProperty("SRUOAICatalog.maxListSize");
 
         if (maxListSize == null) {
             throw new IllegalArgumentException("SRUOAICatalog.maxListSize is missing from the properties file");
@@ -123,16 +117,16 @@ public class XerSRUOAICatalog extends AbstractCatalog {
         return term;
     }
 
-    public Map listSets() throws NoSetHierarchyException {
-        if (sets.size() == 0)
+    public Map<String, Object> listSets() throws NoSetHierarchyException {
+        if (sets.size() == 0) {
             throw new NoSetHierarchyException();
-        Map listSetsMap = new LinkedHashMap();
+        }
+
+        Map<String, Object> listSetsMap = new LinkedHashMap<String, Object>();
         try {
-            Object[] keys = sets.keySet().toArray();
-            Object[] values = sets.values().toArray();
-            ArrayList newList = new ArrayList();
-            for (int i = 0; i < keys.length; ++i) {
-                newList.add(values[i]);
+            List<String> newList = new ArrayList<String>();
+            for (String value: sets.values()) {
+                newList.add(value);
             }
             listSetsMap.put("sets", newList.iterator());
         } catch (Throwable e) {
@@ -143,8 +137,8 @@ public class XerSRUOAICatalog extends AbstractCatalog {
         return listSetsMap;
     }
 
-    public Map listSets(String resumptionToken)
-    throws BadResumptionTokenException {
+    public Map<String, Object> listSets(String resumptionToken)
+            throws BadResumptionTokenException {
         throw new BadResumptionTokenException();
     }
 
@@ -157,10 +151,10 @@ public class XerSRUOAICatalog extends AbstractCatalog {
             String until,
             String set,
             String metadataPrefix)
-    throws
-    BadArgumentException,
-    NoItemsMatchException,
-    OAIInternalServerError {
+            throws
+            BadArgumentException,
+            NoItemsMatchException,
+            OAIInternalServerError {
         if (set != null
                 && set.length() > 0
                 && from.equals(toFinestFrom("0000-00-00"))
@@ -168,20 +162,20 @@ public class XerSRUOAICatalog extends AbstractCatalog {
             from = null;
             until = null;
         }
-        Map listIdentifiersMap = new HashMap();
-        ArrayList headers = new ArrayList();
-        ArrayList identifiers = new ArrayList();
+        Map<String, Object> listIdentifiersMap = new HashMap<String, Object>();
+        List<String> headers = new ArrayList<String>();
+        List<String> identifiers = new ArrayList<String>();
         Document srResponse;
         try {
             srResponse =
-                getSearchRetrieveResponse(sruURL,
-                        from,
-                        until,
-                        set,
-                        "http://www.openarchives.org/OAI/2.0/#header",
-                        1,
-                        maxListSize,
-                "xml");
+                    getSearchRetrieveResponse(sruURL,
+                            from,
+                            until,
+                            set,
+                            "http://www.openarchives.org/OAI/2.0/#header",
+                            1,
+                            maxListSize,
+                            "xml");
         } catch (IOException e) {
             e.printStackTrace();
             throw new OAIInternalServerError(e.getMessage());
@@ -198,7 +192,7 @@ public class XerSRUOAICatalog extends AbstractCatalog {
                 RecordFactory recordFactory = getRecordFactory();
                 for (int i = 0; i < nodeList.getLength(); ++i) {
                     Object rec = getRecordData(nodeList.item(i));
-                    HashMap hashMap = new HashMap();
+                    Map<String, Object> hashMap = new HashMap<String, Object>();
                     hashMap.put("header", rec);
                     String localIdentifier = getRecordFactory().getLocalIdentifier(hashMap);
                     try {
@@ -225,7 +219,7 @@ public class XerSRUOAICatalog extends AbstractCatalog {
                     String resultSetId = XPathAPI.eval(srResponse, "/srw:searchRetrieveResponse/srw:resultSetId", xmlnsEl).str();
                     String nextRecordPosition = XPathAPI.eval(srResponse, "/srw:searchRetrieveResponse/srw:nextRecordPosition", xmlnsEl).str();
                     if (nextRecordPosition != null && nextRecordPosition.length() > 0) {
-                        StringBuffer resumptionToken = new StringBuffer();
+                        StringBuilder resumptionToken = new StringBuilder();
                         resumptionToken.append(resultSetId);
                         resumptionToken.append(":");
                         resumptionToken.append(nextRecordPosition);
@@ -266,7 +260,7 @@ public class XerSRUOAICatalog extends AbstractCatalog {
      * contains Map.Entrys where key="header" value="deleted" or null.
      */
     public Map listIdentifiers(String resumptionToken)
-    throws BadResumptionTokenException, OAIInternalServerError {
+            throws BadResumptionTokenException, OAIInternalServerError {
         StringTokenizer tokenizer = new StringTokenizer(resumptionToken, ":");
         String resultSetId;
         String nextRecordPosition;
@@ -275,24 +269,25 @@ public class XerSRUOAICatalog extends AbstractCatalog {
             resultSetId = tokenizer.nextToken();
             nextRecordPosition = tokenizer.nextToken();
             metadataPrefix = tokenizer.nextToken();
-            if (metadataPrefix.equals("null"))
+            if (metadataPrefix.equals("null")) {
                 metadataPrefix = null;
+            }
         } catch (NoSuchElementException e) {
             throw new BadResumptionTokenException();
         }
-        Map listIdentifiersMap = new HashMap();
-        ArrayList headers = new ArrayList();
-        ArrayList identifiers = new ArrayList();
+        Map<String, Object> listIdentifiersMap = new HashMap<String, Object>();
+        List<String> headers = new ArrayList<String>();
+        List<String> identifiers = new ArrayList<String>();
         try {
             Document srResponse;
             try {
                 srResponse =
-                    getSearchRetrieveResponse(sruURL,
-                            resultSetId,
-                            nextRecordPosition,
-                            "http://www.openarchives.org/OAI/2.0/#header",
-                            maxListSize,
-                    "xml");
+                        getSearchRetrieveResponse(sruURL,
+                                resultSetId,
+                                nextRecordPosition,
+                                "http://www.openarchives.org/OAI/2.0/#header",
+                                maxListSize,
+                                "xml");
             } catch (IOException e) {
                 e.printStackTrace();
                 throw new OAIInternalServerError(e.getMessage());
@@ -309,7 +304,7 @@ public class XerSRUOAICatalog extends AbstractCatalog {
                 for (int i = 0; i < nodeList.getLength(); ++i) {
 
                     Object rec = getRecordData(nodeList.item(i));
-                    HashMap hashMap = new HashMap();
+                    Map<String, Object> hashMap = new HashMap<String, Object>();
                     hashMap.put("header", rec);
                     String localIdentifier = getRecordFactory().getLocalIdentifier(hashMap);
                     hashMap.put("metadata", getNativeMetadata(localIdentifier,
@@ -322,7 +317,7 @@ public class XerSRUOAICatalog extends AbstractCatalog {
                         "/srw:searchRetrieveResponse/srw:nextRecordPosition",
                         xmlnsEl).str();
                 if (nextRecordPosition != null && nextRecordPosition.length() > 0) {
-                    StringBuffer newResumptionToken = new StringBuffer();
+                    StringBuilder newResumptionToken = new StringBuilder();
                     newResumptionToken.append(resultSetId);
                     newResumptionToken.append(":");
                     newResumptionToken.append(nextRecordPosition);
@@ -346,12 +341,12 @@ public class XerSRUOAICatalog extends AbstractCatalog {
      * get an Iterator containing Map.Entrys where key=metadataPrefix
      * and value=schema.
      */
-    public Vector getSchemaLocations(String oaiIdentifier)
-    throws
-    IdDoesNotExistException,
-    NoMetadataFormatsException,
-    OAIInternalServerError {
-        Vector result = new Vector();
+    public List<String> getSchemaLocations(String oaiIdentifier)
+            throws
+            IdDoesNotExistException,
+            NoMetadataFormatsException,
+            OAIInternalServerError {
+        List<String> result = new ArrayList<String>();
         NodeList nodeList = null;
         try {
             nodeList = getIdentifierRecords(sruURL, oaiIdentifier, (String) null);
@@ -363,10 +358,9 @@ public class XerSRUOAICatalog extends AbstractCatalog {
                 try {
                     Object rec = getRecordData(nodeList.item(i));
                     if (rec != null) {
-                        Vector schemaLocations =
-                            getRecordFactory().getSchemaLocations(rec);
-                        for (int j = 0; j < schemaLocations.size(); ++j) {
-                            result.add(schemaLocations.get(j));
+                        List<String> schemaLocations = getRecordFactory().getSchemaLocations(rec);
+                        for (String schemaLocation : schemaLocations) {
+                            result.add(schemaLocation);
                         }
                     } else {
                         throw new OAIInternalServerError("Null Record");
@@ -391,15 +385,13 @@ public class XerSRUOAICatalog extends AbstractCatalog {
         return result;
     }
 
-    /**
-     * get a DocumentFragment containing the specified record
-     */
+    /** get a DocumentFragment containing the specified record */
     public String getRecord(String oaiIdentifier, String metadataPrefix)
-    throws
-    IdDoesNotExistException,
-    IdDoesNotExistException,
-    CannotDisseminateFormatException,
-    OAIInternalServerError {
+            throws
+            IdDoesNotExistException,
+            IdDoesNotExistException,
+            CannotDisseminateFormatException,
+            OAIInternalServerError {
         Object nativeObject;
         try {
             nativeObject = getFullRecord(sruURL, oaiIdentifier, metadataPrefix);
@@ -429,10 +421,10 @@ public class XerSRUOAICatalog extends AbstractCatalog {
             }
             try {
                 String s =
-                    getRecordFactory().create(
-                            nativeObject,
-                            schemaURL,
-                            metadataPrefix);
+                        getRecordFactory().create(
+                                nativeObject,
+                                schemaURL,
+                                metadataPrefix);
                 return s;
             } catch (CannotDisseminateFormatException e) {
                 e.printStackTrace();
@@ -443,15 +435,13 @@ public class XerSRUOAICatalog extends AbstractCatalog {
         }
     }
 
-    /**
-     * get a DocumentFragment containing the specified record
-     */
+    /** get a DocumentFragment containing the specified record */
     public String getMetadata(String oaiIdentifier, String metadataPrefix)
-    throws
-    IdDoesNotExistException,
-    IdDoesNotExistException,
-    CannotDisseminateFormatException,
-    OAIInternalServerError {
+            throws
+            IdDoesNotExistException,
+            IdDoesNotExistException,
+            CannotDisseminateFormatException,
+            OAIInternalServerError {
         Object nativeObject;
         try {
             nativeObject = getFullRecord(sruURL, oaiIdentifier, metadataPrefix);
@@ -502,34 +492,34 @@ public class XerSRUOAICatalog extends AbstractCatalog {
     private NodeList getIdentifierRecords(String sruURL,
             String oaiIdentifier,
             String metadataPrefix)
-    throws TransformerException, SAXException, IOException,
-    ParserConfigurationException {
+            throws TransformerException, SAXException, IOException,
+            ParserConfigurationException {
         Document srResponse;
         String localIdentifier = getRecordFactory().fromOAIIdentifier(oaiIdentifier);
         srResponse =
-            getSearchRetrieveResponse(sruURL,
-                    localIdentifier,
-                    "http://www.openarchives.org/OAI/2.0/#header",
-            "xml");
+                getSearchRetrieveResponse(sruURL,
+                        localIdentifier,
+                        "http://www.openarchives.org/OAI/2.0/#header",
+                        "xml");
         return getRecords(srResponse);
     }
 
     private Object getFullRecord(String sruURL,
             String oaiIdentifier,
             String metadataPrefix)
-    throws SAXException, TransformerException, IOException,
-    ParserConfigurationException {
+            throws SAXException, TransformerException, IOException,
+            ParserConfigurationException {
         NodeList nodeList = getIdentifierRecords(sruURL, oaiIdentifier, metadataPrefix);
         if (nodeList != null) {
-            HashMap hashMap = new HashMap();
+            Map<String, Object> hashMap = new HashMap<String, Object>();
             hashMap.put("header", getRecordData(nodeList.item(0)));
             String nativeRecordSchema = getRecordFactory().getCrosswalks().getNativeRecordSchema(metadataPrefix);
             String localIdentifier = getRecordFactory().fromOAIIdentifier(oaiIdentifier);
             Document srResponse =
-                getSearchRetrieveResponse(sruURL,
-                        localIdentifier,
-                        nativeRecordSchema,
-                "xml");
+                    getSearchRetrieveResponse(sruURL,
+                            localIdentifier,
+                            nativeRecordSchema,
+                            "xml");
             nodeList = getRecords(srResponse);
             hashMap.put("metadata", getRecordData(nodeList.item(0)));
             return hashMap;
@@ -538,16 +528,16 @@ public class XerSRUOAICatalog extends AbstractCatalog {
     }
 
     private Object getNativeMetadata(String localIdentifier, String metadataPrefix)
-    throws TransformerException, SAXException, IOException,
-    ParserConfigurationException {
+            throws TransformerException, SAXException, IOException,
+            ParserConfigurationException {
         String nativeRecordSchema = "info:srw/schema/1/xer";
 //            getRecordFactory().getCrosswalks().getNativeRecordSchema(metadataPrefix);
         Document srResponse;
         srResponse =
-            getSearchRetrieveResponse(sruURL,
-                    localIdentifier,
-                    nativeRecordSchema,
-            "xml");
+                getSearchRetrieveResponse(sruURL,
+                        localIdentifier,
+                        nativeRecordSchema,
+                        "xml");
         NodeList nodeList = getRecords(srResponse);
         return getRecordData(nodeList.item(0));
     }
@@ -556,11 +546,11 @@ public class XerSRUOAICatalog extends AbstractCatalog {
             String until,
             String set,
             String metadataPrefix)
-    throws
-    BadArgumentException,
-    CannotDisseminateFormatException,
-    NoItemsMatchException,
-    OAIInternalServerError {
+            throws
+            BadArgumentException,
+            CannotDisseminateFormatException,
+            NoItemsMatchException,
+            OAIInternalServerError {
         if (set != null
                 && set.length() > 0
                 && from.equals(toFinestFrom("0000-00-00"))
@@ -574,19 +564,19 @@ public class XerSRUOAICatalog extends AbstractCatalog {
         if (toFinestUntil("9999-12-31").compareTo(until) <= 0) {
             until = null;
         }
-        Map listRecordsMap = new HashMap();
-        ArrayList recordsList = new ArrayList();
+        Map<String, Object> listRecordsMap = new HashMap<String, Object>();
+        List<String> recordsList = new ArrayList<String>();
         Document srResponse;
         try {
             srResponse =
-                getSearchRetrieveResponse(sruURL,
-                        from,
-                        until,
-                        set,
-                        "info:srw/schema/1/xer",
-                        1,
-                        maxListSize,
-                "xml");
+                    getSearchRetrieveResponse(sruURL,
+                            from,
+                            until,
+                            set,
+                            "info:srw/schema/1/xer",
+                            1,
+                            maxListSize,
+                            "xml");
         } catch (IOException e) {
             e.printStackTrace();
             throw new OAIInternalServerError(e.getMessage());
@@ -604,8 +594,9 @@ public class XerSRUOAICatalog extends AbstractCatalog {
                 String schemaURL = null;
                 if (metadataPrefix != null) {
                     if ((schemaURL = getCrosswalks().getSchemaURL(metadataPrefix))
-                            == null)
+                            == null) {
                         throw new CannotDisseminateFormatException(metadataPrefix);
+                    }
                 }
                 for (int i = 0; i < nodeList.getLength(); ++i) {
                     Element recEl = getRecordData(nodeList.item(i));
@@ -617,7 +608,7 @@ public class XerSRUOAICatalog extends AbstractCatalog {
                 String nextRecordPosition = XPathAPI.eval(srResponse, "/srw:searchRetrieveResponse/srw:nextRecordPosition", xmlnsEl).str();
                 if (nextRecordPosition != null && nextRecordPosition.length() > 0) {
                     String resultSetId = XPathAPI.eval(srResponse, "/srw:searchRetrieveResponse/srw:resultSetId", xmlnsEl).str();
-                    StringBuffer resumptionToken = new StringBuffer();
+                    StringBuilder resumptionToken = new StringBuilder();
                     resumptionToken.append(resultSetId);
                     resumptionToken.append(":");
                     resumptionToken.append(nextRecordPosition);
@@ -648,7 +639,7 @@ public class XerSRUOAICatalog extends AbstractCatalog {
     }
 
     public Map listRecords(String resumptionToken)
-    throws BadResumptionTokenException, OAIInternalServerError {
+            throws BadResumptionTokenException, OAIInternalServerError {
         StringTokenizer tokenizer = new StringTokenizer(resumptionToken, ":");
         String resultSetId;
         String nextRecordPosition;
@@ -662,27 +653,28 @@ public class XerSRUOAICatalog extends AbstractCatalog {
             e.printStackTrace();
             throw new BadResumptionTokenException();
         }
-        Map listRecordsMap = new HashMap();
-        ArrayList recordsList = new ArrayList();
+        Map<String, Object> listRecordsMap = new HashMap<String, Object>();
+        List<String> recordsList = new ArrayList<String>();
         try {
             Document srResponse =
-                getSearchRetrieveResponse(sruURL,
-                        resultSetId,
-                        nextRecordPosition,
-                        "http://www.openarchives.org/OAI/2.0/#header",
-                        maxListSize,
-                "xml");
+                    getSearchRetrieveResponse(sruURL,
+                            resultSetId,
+                            nextRecordPosition,
+                            "http://www.openarchives.org/OAI/2.0/#header",
+                            maxListSize,
+                            "xml");
             NodeList nodeList = getRecords(srResponse);
             RecordFactory recordFactory = getRecordFactory();
             String schemaURL = null;
             if (metadataPrefix != null) {
                 if ((schemaURL = getCrosswalks().getSchemaURL(metadataPrefix))
-                        == null)
+                        == null) {
                     throw new CannotDisseminateFormatException(metadataPrefix);
+                }
             }
             for (int i = 0; i < nodeList.getLength(); ++i) {
                 Object rec = getRecordData(nodeList.item(i));
-                HashMap hashMap = new HashMap();
+                Map<String, Object> hashMap = new HashMap<String, Object>();
                 hashMap.put("header", rec);
                 String localIdentifier = getRecordFactory().getLocalIdentifier(hashMap);
                 hashMap.put("metadata", getNativeMetadata(localIdentifier,
@@ -695,7 +687,7 @@ public class XerSRUOAICatalog extends AbstractCatalog {
             nextRecordPosition = XPathAPI.eval(srResponse, "/srw:searchRetrieveResponse/srw:nextRecordPosition", xmlnsEl).str();
             if (nextRecordPosition != null && nextRecordPosition.length() > 0) {
                 resultSetId = XPathAPI.eval(srResponse, "/srw:searchRetrieveResponse/srw:resultSetId", xmlnsEl).str();
-                StringBuffer newResumptionToken = new StringBuffer();
+                StringBuilder newResumptionToken = new StringBuilder();
                 newResumptionToken.append(resultSetId);
                 newResumptionToken.append(":");
                 newResumptionToken.append(nextRecordPosition);
@@ -722,9 +714,9 @@ public class XerSRUOAICatalog extends AbstractCatalog {
             int startRecord,
             int maximumRecords,
             String recordPacking)
-    throws SAXException, ParserConfigurationException,
-    UnsupportedEncodingException, IOException {
-        StringBuffer query = new StringBuffer();
+            throws SAXException, ParserConfigurationException,
+            UnsupportedEncodingException, IOException {
+        StringBuilder query = new StringBuilder();
         if ((from != null && from.length() > 0)
                 || (until != null && until.length() > 0)) {
             query.append("(");
@@ -734,8 +726,9 @@ public class XerSRUOAICatalog extends AbstractCatalog {
                 query.append("\"");
             }
             if (until != null && from.length() > 0) {
-                if (query.length() > 0)
+                if (query.length() > 0) {
                     query.append(" and ");
+                }
                 query.append("oai.datestamp<=\"");
                 query.append(normalizeTerm(until));
                 query.append("\"");
@@ -743,13 +736,14 @@ public class XerSRUOAICatalog extends AbstractCatalog {
             query.append(")");
         }
         if (set != null && set.length() > 0) {
-            if (query.length() > 0)
+            if (query.length() > 0) {
                 query.append(" and ");
+            }
             query.append("oai.set=\"");
             query.append(normalizeTerm(set));
             query.append("\"");
         }
-        StringBuffer request = new StringBuffer(sruURL);
+        StringBuilder request = new StringBuilder(sruURL);
         request.append("?operation=searchRetrieve&version=1.1&resultSetTTL=600&query=");
         request.append(URLEncoder.encode(query.toString(), "UTF-8"));
         request.append("&recordSchema=").append(URLEncoder.encode(recordSchema, "UTF-8"));
@@ -768,12 +762,12 @@ public class XerSRUOAICatalog extends AbstractCatalog {
             String recordSchema,
             int maximumRecords,
             String recordPacking)
-    throws SAXException, ParserConfigurationException,
-    UnsupportedEncodingException, IOException {
-        StringBuffer query = new StringBuffer();
+            throws SAXException, ParserConfigurationException,
+            UnsupportedEncodingException, IOException {
+        StringBuilder query = new StringBuilder();
         query.append("cql.resultSetId=");
         query.append(resultSetId);
-        StringBuffer request = new StringBuffer(sruURL);
+        StringBuilder request = new StringBuilder(sruURL);
         request.append("?operation=searchRetrieve&resultSetTTL=600&version=1.1&query=");
         request.append(URLEncoder.encode(query.toString(), "UTF-8"));
         request.append("&recordSchema=").append(URLEncoder.encode(recordSchema, "UTF-8"));
@@ -789,14 +783,14 @@ public class XerSRUOAICatalog extends AbstractCatalog {
             String localIdentifier,
             String recordSchema,
             String recordPacking)
-    throws SAXException, IOException, ParserConfigurationException,
-    UnsupportedEncodingException {
-        StringBuffer query = new StringBuffer();
+            throws SAXException, IOException, ParserConfigurationException,
+            UnsupportedEncodingException {
+        StringBuilder query = new StringBuilder();
         query.append("oai.identifier exact \"");
         query.append(localIdentifier);
         query.append("\"");
 
-        StringBuffer request = new StringBuffer(sruURL);
+        StringBuilder request = new StringBuilder(sruURL);
         request.append("?operation=searchRetrieve&resultSetTTL=0&version=1.1&query=");
         request.append(URLEncoder.encode(query.toString(), "UTF-8"));
         request.append("&recordSchema=").append(URLEncoder.encode(recordSchema, "UTF-8"));
@@ -807,15 +801,15 @@ public class XerSRUOAICatalog extends AbstractCatalog {
     }
 
     private Element getRecordData(Node record)
-    throws TransformerException, SAXException, IOException, ParserConfigurationException {
+            throws TransformerException, SAXException, IOException, ParserConfigurationException {
         Node result = XPathAPI.selectSingleNode(record,
                 "srw:recordData/*[1]",
                 xmlnsEl);
-        return toDocument((Element)result).getDocumentElement();
+        return toDocument((Element) result).getDocumentElement();
     }
 
     private Document toDocument(Element el)
-    throws TransformerException, SAXException, IOException, ParserConfigurationException {
+            throws TransformerException, SAXException, IOException, ParserConfigurationException {
         DOMSource source = new DOMSource(el);
         StringWriter sw = new StringWriter();
         StreamResult result = new StreamResult(sw);
@@ -832,7 +826,7 @@ public class XerSRUOAICatalog extends AbstractCatalog {
     }
 
     private NodeList getRecords(Document srResponse)
-    throws TransformerException {
+            throws TransformerException {
         return XPathAPI.selectNodeList(srResponse, "/srw:searchRetrieveResponse/srw:records/srw:record", xmlnsEl);
     }
 

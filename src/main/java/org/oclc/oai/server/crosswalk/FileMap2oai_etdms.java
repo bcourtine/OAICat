@@ -12,6 +12,7 @@ package org.oclc.oai.server.crosswalk;
 
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 import org.oclc.oai.server.verb.CannotDisseminateFormatException;
@@ -55,7 +56,7 @@ public class FileMap2oai_etdms extends Crosswalk {
      */
     public String createMetadata(Object nativeItem)
 	throws CannotDisseminateFormatException {
-	HashMap recordMap = (HashMap)nativeItem;
+	Map<String, Object> recordMap = (HashMap)nativeItem;
         try {
             String xmlRec = (new String((byte[])recordMap.get("recordBytes"), "UTF-8")).trim();
             if (xmlRec.startsWith("<?")) {

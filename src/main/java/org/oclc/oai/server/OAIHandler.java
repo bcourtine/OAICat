@@ -19,10 +19,7 @@ import java.io.Writer;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.SocketException;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Properties;
+import java.util.*;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -61,20 +58,8 @@ public class OAIHandler extends HttpServlet {
     private static final String VERSION = "1.5.58";
     private static boolean debug = false;
 
-//    private Transformer transformer = null;
-//    private boolean serviceUnavailable = false;
-//    private boolean monitor = false;
-//    private boolean forceRender = false;
-    protected HashMap attributesMap = new HashMap();
-//    private HashMap serverVerbs = null;
-//    private HashMap extensionVerbs = null;
-//    private String extensionPath = null;
-    
-//    private static Logger logger = Logger.getLogger(OAIHandler.class);
-//    static {
-//        BasicConfigurator.configure();
-//    }
-    
+    protected Map<String, Object> attributesMap = new HashMap<String, Object>();
+
     private Log log = LogFactory.getLog(OAIHandler.class);
     
     /**
@@ -95,7 +80,7 @@ public class OAIHandler extends HttpServlet {
         super.init(config);
         
         try {
-            HashMap attributes = null;
+            Map<String, Object> attributes = null;
             ServletContext context = getServletContext();
             Properties properties = (Properties) context.getAttribute(PROPERTIES_SERVLET_CONTEXT_ATTRIBUTE);
             if (properties == null) {
@@ -143,17 +128,15 @@ public class OAIHandler extends HttpServlet {
         }
     }
     
-    public HashMap getAttributes(Properties properties)
-    throws Throwable {
-        HashMap attributes = new HashMap();
+    public Map<String, Object> getAttributes(Properties properties) throws Throwable {
+        Map<String, Object> attributes = new HashMap<String, Object>();
         Enumeration attrNames = getServletContext().getAttributeNames();
         while (attrNames.hasMoreElements()) {
             String attrName = (String)attrNames.nextElement();
             attributes.put(attrName, getServletContext().getAttribute(attrName));
         }
         attributes.put("OAIHandler.properties", properties);
-//        String temp = properties.getProperty("OAIHandler.debug");
-//        if ("true".equals(temp)) debug = true;
+
         String missingVerbClassName = properties.getProperty("OAIHandler.missingVerbClassName", "org.oclc.oai.server.verb.BadVerb");
         Class missingVerbClass = Class.forName(missingVerbClassName);
         attributes.put("OAIHandler.missingVerbClass", missingVerbClass);
@@ -187,8 +170,8 @@ public class OAIHandler extends HttpServlet {
         return attributes;
     }
     
-    public HashMap getAttributes(String pathInfo) {
-        HashMap attributes = null;
+    public Map<String, Object> getAttributes(String pathInfo) {
+        Map<String, Object> attributes = null;
         log.debug("pathInfo=" + pathInfo);
         if (pathInfo != null && pathInfo.length() > 0) {
             if (attributesMap.containsKey(pathInfo)) {
@@ -219,7 +202,7 @@ public class OAIHandler extends HttpServlet {
         }
         if (attributes == null)
             log.debug("use global attributes");
-            attributes = (HashMap) attributesMap.get("global");
+            attributes = (Map<String, Object>) attributesMap.get("global");
         return attributes;
     }
 
@@ -235,7 +218,7 @@ public class OAIHandler extends HttpServlet {
     public void doGet(HttpServletRequest request,
             HttpServletResponse response)
     throws IOException {
-        HashMap attributes = getAttributes(request.getPathInfo());
+        Map<String, Object> attributes = getAttributes(request.getPathInfo());
         if (!filterRequest(request, response)) {
             return;
         }
@@ -249,8 +232,8 @@ public class OAIHandler extends HttpServlet {
         boolean serviceUnavailable = isServiceUnavailable(properties);
         String extensionPath = properties.getProperty("OAIHandler.extensionPath", "/extension");
         
-        HashMap serverVerbs = ServerVerb.getVerbs(properties);
-        HashMap extensionVerbs = ServerVerb.getExtensionVerbs(properties);
+        Map<String, Class<?>> serverVerbs = ServerVerb.getVerbs(properties);
+        Map<String, Class<?>> extensionVerbs = ServerVerb.getExtensionVerbs(properties);
         
         Transformer transformer =
             (Transformer) attributes.get("OAIHandler.transformer");
@@ -259,13 +242,9 @@ public class OAIHandler extends HttpServlet {
         if ("true".equals(properties.getProperty("OAIHandler.forceRender"))) {
             forceRender = true;
         }
-        
-//      try {
+
         request.setCharacterEncoding("UTF-8");
-//      } catch (UnsupportedEncodingException e) {
-//      e.printStackTrace();
-//      throw new IOException(e.getMessage());
-//      }
+
         Date then = null;
         if (monitor) then = new Date();
         if (debug) {
@@ -293,29 +272,12 @@ public class OAIHandler extends HttpServlet {
                 if (transformer != null) {
                     
                     // return HTML if the client is an old browser
-                    if (forceRender
-                            || userAgent.indexOf("opera") != -1
-                            || (userAgent.startsWith("mozilla")
-                                    && userAgent.indexOf("msie 6") == -1
-                            /* && userAgent.indexOf("netscape/7") == -1 */)) {
+                    if (forceRender || userAgent.indexOf("opera") != -1 || (userAgent.startsWith("mozilla") && userAgent.indexOf("msie 6") == -1)) {
                         serverTransformer = transformer;
                     }
                 }
                 String result = getResult(attributes, request, response, serverTransformer, serverVerbs, extensionVerbs, extensionPath);
-//              log.debug("result=" + result);
-                
-//              if (serverTransformer) { // render on the server
-//              response.setContentType("text/html; charset=UTF-8");
-//              StringReader stringReader = new StringReader(getResult(request));
-//              StreamSource streamSource = new StreamSource(stringReader);
-//              StringWriter stringWriter = new StringWriter();
-//              transformer.transform(streamSource, new StreamResult(stringWriter));
-//              result = stringWriter.toString();
-//              } else { // render on the client
-//              response.setContentType("text/xml; charset=UTF-8");
-//              result = getResult(request);
-//              }
-                
+
                 Writer out = getWriter(request, response);
                 out.write(result);
                 out.close();
@@ -338,15 +300,13 @@ public class OAIHandler extends HttpServlet {
             }
         }
         if (monitor) {
-            StringBuffer reqUri = new StringBuffer(request.getRequestURI().toString());
+            StringBuilder reqUri = new StringBuilder(request.getRequestURI().toString());
             String queryString = request.getQueryString();   // d=789
             if (queryString != null) {
                 reqUri.append("?").append(queryString);
             }
             Runtime rt = Runtime.getRuntime();
-            System.out.println(rt.freeMemory() + "/" + rt.totalMemory() + " "
-                    + ((new Date()).getTime()-then.getTime()) + "ms: "
-                    + reqUri.toString());
+            System.out.println(rt.freeMemory() + "/" + rt.totalMemory() + " " + ((new Date()).getTime()-then.getTime()) + "ms: " + reqUri.toString());
         }
     }
     
@@ -372,19 +332,12 @@ public class OAIHandler extends HttpServlet {
      * @param response
      * @return false=return immediately, true=continue
      */
-    protected boolean filterRequest(HttpServletRequest request,
-            HttpServletResponse response) {
+    protected boolean filterRequest(HttpServletRequest request, HttpServletResponse response) {
         return true;
     }
 
-    public static String getResult(HashMap attributes,
-            HttpServletRequest request,
-            HttpServletResponse response,
-            Transformer serverTransformer,
-            HashMap serverVerbs,
-            HashMap extensionVerbs,
-            String extensionPath)
-    throws Throwable {
+    public static String getResult(Map<String, Object> attributes, HttpServletRequest request, HttpServletResponse response, Transformer serverTransformer,
+            Map<String, Class<?>> serverVerbs, Map<String, Class<?>> extensionVerbs, String extensionPath) throws Throwable {
         try {
             boolean isExtensionVerb = extensionPath.equals(request.getPathInfo());
             String verb = request.getParameter("verb");
@@ -394,24 +347,16 @@ public class OAIHandler extends HttpServlet {
             String result;
             Class verbClass = null;
             if (isExtensionVerb) {
-                verbClass = (Class)extensionVerbs.get(verb);
+                verbClass = extensionVerbs.get(verb);
             } else {
-                verbClass = (Class)serverVerbs.get(verb);
+                verbClass = serverVerbs.get(verb);
             }
             if (verbClass == null) {
                 verbClass = (Class) attributes.get("OAIHandler.missingVerbClass");
             }
-            Method construct = verbClass.getMethod("construct",
-                    new Class[] {HashMap.class,
-                    HttpServletRequest.class,
-                    HttpServletResponse.class,
-                    Transformer.class});
+            Method construct = verbClass.getMethod("construct", new Class[] {HashMap.class, HttpServletRequest.class, HttpServletResponse.class, Transformer.class});
             try {
-                result = (String)construct.invoke(null,
-                        new Object[] {attributes,
-                        request,
-                        response,
-                        serverTransformer});
+                result = (String)construct.invoke(null, new Object[] {attributes, request, response, serverTransformer});
             } catch (InvocationTargetException e) {
                 throw e.getTargetException();
             }

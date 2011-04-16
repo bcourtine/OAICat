@@ -28,7 +28,7 @@ import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
-import java.util.Vector;
+import java.util.List;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -55,91 +55,84 @@ import org.oclc.oai.server.verb.OAIInternalServerError;
  */
 
 public class NewFileSystemOAICatalog extends AbstractCatalog {
-    static final boolean debug=false;
+    static final boolean debug = false;
 
     private SimpleDateFormat dateFormatter = new SimpleDateFormat();
-    protected String           homeDir;
-    protected HashMap          fileDateMap = new HashMap();
-    private HashMap setMap = new HashMap();
-    private HashMap          resumptionResults=new HashMap();
-    private int              maxListSize;
-    private ArrayList sets = null;
+    protected String homeDir;
+    protected HashMap fileDateMap = new HashMap();
+    private Map<String, Object> setMap = new HashMap<String, Object>();
+    private Map<String, Object> resumptionResults = new HashMap<String, Object>();
+    private int maxListSize;
+    private List<String> sets = null;
 
     public NewFileSystemOAICatalog(Properties properties) throws IOException {
-        String          temp;
+        String temp;
 
         dateFormatter.applyPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
-        temp=properties.getProperty("NewFileSystemOAICatalog.maxListSize");
-        if (temp==null)
-            throw new IllegalArgumentException("NewFileSystemOAICatalog."+
-                "maxListSize is missing from the properties file");
+        temp = properties.getProperty("NewFileSystemOAICatalog.maxListSize");
+        if (temp == null) {
+            throw new IllegalArgumentException("NewFileSystemOAICatalog. maxListSize is missing from the properties file");
+        }
         maxListSize = Integer.parseInt(temp);
-        if(debug)
-            System.out.println("in NewFileSystemOAICatalog(): maxListSize="+
-                maxListSize);
+        if (debug) {
+            System.out.println("in NewFileSystemOAICatalog(): maxListSize=" + maxListSize);
+        }
 
-        homeDir=properties.getProperty("NewFileSystemOAICatalog.homeDir");
-        if (homeDir==null)
-            throw new IllegalArgumentException("NewFileSystemOAICatalog."+
-                "homeDir is missing from the properties file");
-        if(debug)
-            System.out.println("in NewFileSystemOAICatalog(): homeDir="+
-                homeDir);
+        homeDir = properties.getProperty("NewFileSystemOAICatalog.homeDir");
+        if (homeDir == null) {
+            throw new IllegalArgumentException("NewFileSystemOAICatalog. homeDir is missing from the properties file");
+        }
+        if (debug) {
+            System.out.println("in NewFileSystemOAICatalog(): homeDir=" + homeDir);
+        }
 
 
-	File homeFile = new File(homeDir);
-	int homeDirLen = homeFile.getPath().length()+1;
-	loadFileMap(homeDirLen, homeFile);
-// 	Iterator iterator = fileDateMap.entrySet().iterator();
-// 	while (iterator.hasNext()) {
-// 	    Map.Entry entry = (Map.Entry)iterator.next();
-// 	    System.out.println(entry.getKey() + ":" + entry.getValue());
-// 	}
-	sets = getSets(properties);
+        File homeFile = new File(homeDir);
+        int homeDirLen = homeFile.getPath().length() + 1;
+        loadFileMap(homeDirLen, homeFile);
+        sets = getSets(properties);
     }
 
-    private static ArrayList getSets(Properties properties) {
-        TreeMap treeMap = new TreeMap();
-	String propertyPrefix = "Sets.";
-	Enumeration propNames = properties.propertyNames();
-	while (propNames.hasMoreElements()) {
-	    String propertyName = (String)propNames.nextElement();
-	    if (propertyName.startsWith(propertyPrefix)) {
-                treeMap.put(propertyName, properties.get(propertyName));
-	    }
-	}
- 	return new ArrayList(treeMap.values());
+    private static List<String> getSets(Properties properties) {
+        Map<String, String> treeMap = new TreeMap<String, String>();
+        String propertyPrefix = "Sets.";
+        Enumeration propNames = properties.propertyNames();
+        while (propNames.hasMoreElements()) {
+            String propertyName = (String) propNames.nextElement();
+            if (propertyName.startsWith(propertyPrefix)) {
+                treeMap.put(propertyName, properties.getProperty(propertyName));
+            }
+        }
+        return new ArrayList<String>(treeMap.values());
     }
-    
+
     private void loadFileMap(int homeDirLen, File currentDir)
-        throws IOException {
+            throws IOException {
         try {
             String[] list = currentDir.list();
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
-            for (int i=0; i<list.length; ++i) {
+            for (int i = 0; i < list.length; ++i) {
                 File child = new File(currentDir, list[i]);
                 if (child.isDirectory() && !"CVS".equals(child.getName())) {
                     loadFileMap(homeDirLen, child);
                 } else if (isMetadataFile(child)) {
                     String path = file2path(homeDirLen, child);
                     System.out.println("parsing " + path);
-                    //                 String datestamp = date2OAIDatestamp(new Date(child.lastModified()));
                     File file = localIdentifier2File(path);
                     FileInputStream fis = new FileInputStream(file);
                     InputSource data = new InputSource(fis);
                     Node doc = builder.parse(data);
                     fis.close();
-                    
+
                     Node datestampNode = XPathAPI.selectSingleNode(doc, "/record/header/datestamp");
-                    fileDateMap.put(path,
-                                    XPathAPI.eval(datestampNode, "string()").str());
+                    fileDateMap.put(path, XPathAPI.eval(datestampNode, "string()").str());
                     NodeList setNodes = XPathAPI.selectNodeList(doc, "/record/header/setSpec");
-                    for (int j=0; j<setNodes.getLength(); ++j) {
+                    for (int j = 0; j < setNodes.getLength(); ++j) {
                         Node setSpecNode = setNodes.item(j);
                         String setSpec = XPathAPI.eval(setSpecNode,
-                                                       "string()").str();
-                        ArrayList setSpecList = (ArrayList)setMap.get(setSpec);
+                                "string()").str();
+                        ArrayList setSpecList = (ArrayList) setMap.get(setSpec);
                         if (setSpecList == null) {
                             setSpecList = new ArrayList();
                             setMap.put(setSpec, setSpecList);
@@ -167,40 +160,37 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
 
     /**
      * Override this method if you don't like the default localIdentifiers.
+     *
      * @param homeDirLen the length of the home directory path
      * @param file the File object containing the native record
      * @return localIdentifier
      */
     protected String file2path(int homeDirLen, File file) {
-	String fileName = file.getPath().substring(homeDirLen).replace(File.separatorChar, '/');
-	return fileName;
+        return file.getPath().substring(homeDirLen).replace(File.separatorChar, '/');
     }
 
     /**
      * Override this method if you don't like the default localIdentifiers.
+     *
      * @param localIdentifier the localIdentifier as parsed from the OAI identifier
      * @return the File object containing the native record
      */
     protected File localIdentifier2File(String localIdentifier) {
         String fileName = localIdentifier.replace('/', File.separatorChar);
-	return new File(homeDir, fileName);
+        return new File(homeDir, fileName);
     }
 
-//     private String date2OAIDatestamp(Date date) {
-//         return dateFormatter.format(date);
-//     }
-
-    private HashMap getNativeHeader(String path) {
-        HashMap recordMap = null;
+    private Map<String, Object> getNativeHeader(String path) {
+        Map<String, Object> recordMap = null;
         if (fileDateMap.containsKey(path)) {
             recordMap = new HashMap();
             recordMap.put("localIdentifier", path.substring(0, path.lastIndexOf(".")));
             recordMap.put("lastModified", fileDateMap.get(path));
-            ArrayList setSpecs = new ArrayList();
+            List<String> setSpecs = new ArrayList<String>();
             Iterator keySet = setMap.keySet().iterator();
             while (keySet.hasNext()) {
-                String key = (String)keySet.next();
-                ArrayList identifierList = (ArrayList)setMap.get(key);
+                String key = (String) keySet.next();
+                ArrayList identifierList = (ArrayList) setMap.get(key);
                 if (identifierList.contains(path)) {
                     setSpecs.add(key);
                 }
@@ -211,24 +201,20 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
         return recordMap;
     }
 
-    private ArrayList getExtensionList(String localIdentifier) {
-//         System.out.println("getExtensionList: localIdentifier="
-//                            + localIdentifier);
-        ArrayList list = new ArrayList();
+    private List<String> getExtensionList(String localIdentifier) {
+        List<String> list = new ArrayList<String>();
         Iterator iterator = fileDateMap.entrySet().iterator();
         while (iterator.hasNext()) {
-            Map.Entry entry = (Map.Entry)iterator.next();
-//             System.out.println("entry.getKey()=" + entry.getKey());
-            if (((String)entry.getKey()).startsWith(localIdentifier)) {
-                list.add(((String)entry.getKey()).substring(localIdentifier.length()+1));
+            Map.Entry entry = (Map.Entry) iterator.next();
+            if (((String) entry.getKey()).startsWith(localIdentifier)) {
+                list.add(((String) entry.getKey()).substring(localIdentifier.length() + 1));
             }
         }
         return list;
     }
-    
-    private HashMap getNativeRecord(String path)
-        throws IOException {
-        HashMap recordMap = getNativeHeader(path);
+
+    private Map<String, Object> getNativeRecord(String path) throws IOException {
+        Map<String, Object> recordMap = getNativeHeader(path);
         if (recordMap == null) {
             return null;
         } else {
@@ -236,8 +222,8 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
             try {
                 FileInputStream fis = new FileInputStream(file);
                 BufferedInputStream bis = new BufferedInputStream(fis);
-                byte[] buffer = new byte[(int)file.length()];
-                bis.read(buffer, 0, (int)file.length());
+                byte[] buffer = new byte[(int) file.length()];
+                bis.read(buffer, 0, (int) file.length());
                 recordMap.put("recordBytes", buffer);
                 bis.close();
                 fis.close();
@@ -247,31 +233,30 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
             }
         }
     }
-    
+
     /**
      * Retrieve the specified metadata for the specified oaiIdentifier
      *
-     * @param     oaiIdentifier the OAI identifier
-     * @param     metadataPrefix the OAI metadataPrefix
-     * @return    the Record object containing the result.
-     * @exception CannotDisseminateFormatException signals an http status
-     *                code 400 problem
-     * @exception IdDoesNotExistException signals an http status code 404
-     *                problem
-     * @exception OAIInternalServerError signals an http status code 500
-     *                problem
+     * @param oaiIdentifier the OAI identifier
+     * @param metadataPrefix the OAI metadataPrefix
+     * @return the Record object containing the result.
+     * @throws CannotDisseminateFormatException signals an http status
+     * code 400 problem
+     * @throws IdDoesNotExistException signals an http status code 404
+     * problem
+     * @throws OAIInternalServerError signals an http status code 500
+     * problem
      */
     public String getRecord(String oaiIdentifier, String metadataPrefix)
-        throws IdDoesNotExistException, CannotDisseminateFormatException,
-               OAIInternalServerError {
-        HashMap nativeItem = null;
+            throws IdDoesNotExistException, CannotDisseminateFormatException, OAIInternalServerError {
+        Map<String, Object> nativeItem = null;
         try {
-	    String localIdentifier
-		= getRecordFactory().fromOAIIdentifier(oaiIdentifier);
+            String localIdentifier = getRecordFactory().fromOAIIdentifier(oaiIdentifier);
 
             nativeItem = getNativeRecord(localIdentifier + "." + metadataPrefix);
-            if (nativeItem == null)
+            if (nativeItem == null) {
                 throw new IdDoesNotExistException(oaiIdentifier);
+            }
             return constructRecord(nativeItem, metadataPrefix);
         } catch (IOException e) {
             e.printStackTrace();
@@ -283,30 +268,20 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
     /**
      * Retrieve a list of schemaLocation values associated with the specified
      * oaiIdentifier.
-     *
+     * <p/>
      * We get passed the ID for a record and are supposed to return a list
      * of the formats that we can deliver the record in.  Since we are assuming
      * that all the records in the directory have the same format, the
      * response to this is static;
      *
      * @param oaiIdentifier the OAI identifier
-     * @return a Vector containing schemaLocation Strings
-     * @exception OAIBadRequestException signals an http status code 400
-     *            problem
-     * @exception OAINotFoundException signals an http status code 404 problem
+     * @return a List<String> containing schemaLocation Strings
      */
-    public Vector getSchemaLocations(String oaiIdentifier)
-      throws IdDoesNotExistException, NoMetadataFormatsException {
-        ArrayList extensionList = null;
-//         try {
-	    String localIdentifier
-		= getRecordFactory().fromOAIIdentifier(oaiIdentifier);
-            extensionList = getExtensionList(localIdentifier);
-//         } catch (IOException e) {
-//             e.printStackTrace();
-//             throw new OAIInternalServerError("Database Failure");
-//         }
-        
+    public List<String> getSchemaLocations(String oaiIdentifier) throws IdDoesNotExistException, NoMetadataFormatsException {
+        List<String> extensionList = null;
+        String localIdentifier = getRecordFactory().fromOAIIdentifier(oaiIdentifier);
+        extensionList = getExtensionList(localIdentifier);
+
         if (extensionList != null) {
             return getRecordFactory().getSchemaLocations(extensionList);
         } else {
@@ -324,71 +299,65 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
      * date is desired
      * @param set set name or null if no set is desired
      * @return a Map object containing an optional "resumptionToken" key/value
-     * pair and an "identifiers" Map object. The "identifiers" Map contains OAI
-     * identifier keys with corresponding values of "true" or null depending on
-     * whether the identifier is deleted or not.
-     * @exception OAIBadRequestException signals an http status code 400
-     *            problem
+     *         pair and an "identifiers" Map object. The "identifiers" Map contains OAI
+     *         identifier keys with corresponding values of "true" or null depending on
+     *         whether the identifier is deleted or not.
+     *         problem
      */
-    public Map listIdentifiers(String from, String until, String set, String metadataPrefix)
-        throws NoItemsMatchException {
+    public Map<String, Object> listIdentifiers(String from, String until, String set, String metadataPrefix) throws NoItemsMatchException {
         purge(); // clean out old resumptionTokens
-        Map listIdentifiersMap = new HashMap();
-        ArrayList headers = new ArrayList();
-        ArrayList identifiers = new ArrayList();
-	Iterator iterator = fileDateMap.entrySet().iterator();
-	int numRows = fileDateMap.entrySet().size();
-	int count = 0;
-        ArrayList setIdentifiers = (ArrayList)setMap.get(set);
-	while (count < maxListSize && iterator.hasNext()) {
-	    Map.Entry entryDateMap = (Map.Entry)iterator.next();
-            String fileDate = (String)entryDateMap.getValue();
-            String path = (String)entryDateMap.getKey();
+        Map<String, Object> listIdentifiersMap = new HashMap<String, Object>();
+        List<String> headers = new ArrayList<String>();
+        List<String> identifiers = new ArrayList<String>();
+        Iterator iterator = fileDateMap.entrySet().iterator();
+        int numRows = fileDateMap.entrySet().size();
+        int count = 0;
+        ArrayList setIdentifiers = (ArrayList) setMap.get(set);
+        while (count < maxListSize && iterator.hasNext()) {
+            Map.Entry entryDateMap = (Map.Entry) iterator.next();
+            String fileDate = (String) entryDateMap.getValue();
+            String path = (String) entryDateMap.getKey();
             if (fileDate.compareTo(from) >= 0
-                && fileDate.compareTo(until) <= 0
-                && (setIdentifiers == null || setIdentifiers.contains(path))) {
-                HashMap nativeHeader = getNativeHeader((String)entryDateMap.getKey());
+                    && fileDate.compareTo(until) <= 0
+                    && (setIdentifiers == null || setIdentifiers.contains(path))) {
+                Map<String, Object> nativeHeader = getNativeHeader((String) entryDateMap.getKey());
                 String[] header = getRecordFactory().createHeader(nativeHeader);
                 headers.add(header[0]);
                 identifiers.add(header[1]);
                 count++;
             }
-	}
+        }
 
-        if (count == 0)
+        if (count == 0) {
             throw new NoItemsMatchException();
-        
-	/* decide if you're done */
-	if (iterator.hasNext()) {
-	    String resumptionId = getRSName();
-	    resumptionResults.put(resumptionId, iterator);
+        }
 
-	    /*****************************************************************
-	     * Construct the resumptionToken String however you see fit.
-	     *****************************************************************/
-	    StringBuffer resumptionTokenSb = new StringBuffer();
-	    resumptionTokenSb.append(resumptionId);
-	    resumptionTokenSb.append(":");
-	    resumptionTokenSb.append(Integer.toString(count));
-	    resumptionTokenSb.append(":");
- 	    resumptionTokenSb.append(Integer.toString(numRows));
- 	    resumptionTokenSb.append(":");
-	    resumptionTokenSb.append(metadataPrefix);
- 	    resumptionTokenSb.append(":");
-	    resumptionTokenSb.append(set);
-            
-	    /*****************************************************************
-	     * Use the following line if you wish to include the optional
-	     * resumptionToken attributes in the response. Otherwise, use the
-	     * line after it that I've commented out.
-	     *****************************************************************/
- 	    listIdentifiersMap.put("resumptionMap",
- 				   getResumptionMap(resumptionTokenSb.toString(),
- 						    numRows,
- 						    0));
-// 	    listIdentifiersMap.put("resumptionMap",
-// 				   getResumptionMap(resumptionTokenSb.toString()));
-	}
+        /* decide if you're done */
+        if (iterator.hasNext()) {
+            String resumptionId = getRSName();
+            resumptionResults.put(resumptionId, iterator);
+
+            /*****************************************************************
+             * Construct the resumptionToken String however you see fit.
+             *****************************************************************/
+            StringBuilder resumptionTokenSb = new StringBuilder();
+            resumptionTokenSb.append(resumptionId);
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(Integer.toString(count));
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(Integer.toString(numRows));
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(metadataPrefix);
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(set);
+
+            /*****************************************************************
+             * Use the following line if you wish to include the optional
+             * resumptionToken attributes in the response. Otherwise, use the
+             * line after it that I've commented out.
+             *****************************************************************/
+            listIdentifiersMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(), numRows, 0));
+        }
         listIdentifiersMap.put("headers", headers.iterator());
         listIdentifiersMap.put("identifiers", identifiers.iterator());
         return listIdentifiersMap;
@@ -400,19 +369,17 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
      * @param resumptionToken implementation-dependent format taken from the
      * previous listIdentifiers() Map result.
      * @return a Map object containing an optional "resumptionToken" key/value
-     * pair and an "identifiers" Map object. The "identifiers" Map contains OAI
-     * identifier keys with corresponding values of "true" or null depending on
-     * whether the identifier is deleted or not.
-     * @exception OAIBadRequestException signals an http status code 400
-     *            problem
+     *         pair and an "identifiers" Map object. The "identifiers" Map contains OAI
+     *         identifier keys with corresponding values of "true" or null depending on
+     *         whether the identifier is deleted or not.
+     *         problem
      */
-    public Map listIdentifiers(String resumptionToken)
-      throws BadResumptionTokenException {
+    public Map<String, Object> listIdentifiers(String resumptionToken) throws BadResumptionTokenException {
         purge(); // clean out old resumptionTokens
-        Map listIdentifiersMap = new HashMap();
-        ArrayList headers = new ArrayList();
-        ArrayList identifiers = new ArrayList();
-        
+        Map<String, Object> listIdentifiersMap = new HashMap<String, Object>();
+        List<String> headers = new ArrayList<String>();
+        List<String> identifiers = new ArrayList<String>();
+
         /**********************************************************************
          * parse your resumptionToken and look it up in the resumptionResults,
          * if necessary
@@ -421,72 +388,69 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
         String resumptionId;
         int oldCount;
         String metadataPrefix;
-	int numRows;
+        int numRows;
         String set;
         try {
             resumptionId = tokenizer.nextToken();
             oldCount = Integer.parseInt(tokenizer.nextToken());
-	    numRows = Integer.parseInt(tokenizer.nextToken());
+            numRows = Integer.parseInt(tokenizer.nextToken());
             metadataPrefix = tokenizer.nextToken();
             set = tokenizer.nextToken();
         } catch (NoSuchElementException e) {
             throw new BadResumptionTokenException();
         }
 
-	/* Get some more records from your database */
-	Iterator iterator = (Iterator)resumptionResults.remove(resumptionId);
-	if (iterator == null) {
-	    System.out.println("NewFileSystemOAICatalog.listIdentifiers: reuse of old resumptionToken?");
-	    iterator = fileDateMap.entrySet().iterator();
-	    for (int i = 0; i<oldCount; ++i)
-		iterator.next();
-	}
-        
-	/* load the headers and identifiers ArrayLists. */
-	int count = 0;
-        ArrayList setIdentifiers = (ArrayList)setMap.get(set);
-	while (count < maxListSize && iterator.hasNext()) {
-	    Map.Entry entryDateMap = (Map.Entry)iterator.next();
-            String path = (String)entryDateMap.getKey();
+        /* Get some more records from your database */
+        Iterator iterator = (Iterator) resumptionResults.remove(resumptionId);
+        if (iterator == null) {
+            System.out.println("NewFileSystemOAICatalog.listIdentifiers: reuse of old resumptionToken?");
+            iterator = fileDateMap.entrySet().iterator();
+            for (int i = 0; i < oldCount; ++i) {
+                iterator.next();
+            }
+        }
+
+        /* load the headers and identifiers ArrayLists. */
+        int count = 0;
+        ArrayList setIdentifiers = (ArrayList) setMap.get(set);
+        while (count < maxListSize && iterator.hasNext()) {
+            Map.Entry entryDateMap = (Map.Entry) iterator.next();
+            String path = (String) entryDateMap.getKey();
             if (setIdentifiers == null || setIdentifiers.contains(path)) {
-                HashMap nativeHeader = getNativeHeader((String)entryDateMap.getKey());
+                Map<String, Object> nativeHeader = getNativeHeader((String) entryDateMap.getKey());
                 String[] header = getRecordFactory().createHeader(nativeHeader);
                 headers.add(header[0]);
                 identifiers.add(header[1]);
                 count++;
             }
-	}
-        
-	/* decide if you're done. */
-	if (iterator.hasNext()) {
-	    resumptionId = getRSName();
-	    resumptionResults.put(resumptionId, iterator);
-            
-	    /*****************************************************************
-	     * Construct the resumptionToken String however you see fit.
-	     *****************************************************************/
-	    StringBuffer resumptionTokenSb = new StringBuffer();
-	    resumptionTokenSb.append(resumptionId);
-	    resumptionTokenSb.append(":");
-	    resumptionTokenSb.append(Integer.toString(oldCount + count));
-	    resumptionTokenSb.append(":");
-	    resumptionTokenSb.append(Integer.toString(numRows));
-	    resumptionTokenSb.append(":");
-	    resumptionTokenSb.append(metadataPrefix);
-	    resumptionTokenSb.append(":");
-	    resumptionTokenSb.append(set);
-            
-	    /*****************************************************************
-	     * Use the following line if you wish to include the optional
-	     * resumptionToken attributes in the response. Otherwise, use the
-	     * line after it that I've commented out.
-	     *****************************************************************/
-	    listIdentifiersMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(),
-								     numRows,
-								     oldCount));
-	    //          listIdentifiersMap.put("resumptionMap",
-	    //                                 getResumptionMap(resumptionTokenSb.toString()));
-	}
+        }
+
+        /* decide if you're done. */
+        if (iterator.hasNext()) {
+            resumptionId = getRSName();
+            resumptionResults.put(resumptionId, iterator);
+
+            /*****************************************************************
+             * Construct the resumptionToken String however you see fit.
+             *****************************************************************/
+            StringBuilder resumptionTokenSb = new StringBuilder();
+            resumptionTokenSb.append(resumptionId);
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(Integer.toString(oldCount + count));
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(Integer.toString(numRows));
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(metadataPrefix);
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(set);
+
+            /*****************************************************************
+             * Use the following line if you wish to include the optional
+             * resumptionToken attributes in the response. Otherwise, use the
+             * line after it that I've commented out.
+             *****************************************************************/
+            listIdentifiersMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(), numRows, oldCount));
+        }
 
         listIdentifiersMap.put("headers", headers.iterator());
         listIdentifiersMap.put("identifiers", identifiers.iterator());
@@ -501,18 +465,17 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
      * @param nativeItem native item from the dataase
      * @param metadataPrefix the desired metadataPrefix for performing the crosswalk
      * @return the <record/> String
-     * @exception CannotDisseminateFormatException the record is not available
-     * for the specified metadataPrefix.
+     * @throws CannotDisseminateFormatException the record is not available for the specified metadataPrefix.
      */
-    private String constructRecord(HashMap nativeItem, String metadataPrefix)
-        throws CannotDisseminateFormatException {
+    private String constructRecord(Map<String, Object> nativeItem, String metadataPrefix) throws CannotDisseminateFormatException {
         String schemaURL = null;
-	Iterator setSpecs = getSetSpecs(nativeItem);
-	Iterator abouts = getAbouts(nativeItem);
+        Iterator setSpecs = getSetSpecs(nativeItem);
+        Iterator abouts = getAbouts(nativeItem);
 
         if (metadataPrefix != null) {
-            if ((schemaURL = getCrosswalks().getSchemaURL(metadataPrefix)) == null)
+            if ((schemaURL = getCrosswalks().getSchemaURL(metadataPrefix)) == null) {
                 throw new CannotDisseminateFormatException(metadataPrefix);
+            }
         }
         return getRecordFactory().create(nativeItem, schemaURL, metadataPrefix, setSpecs, abouts);
     }
@@ -520,20 +483,18 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
     /**
      * get an Iterator containing the setSpecs for the nativeItem
      *
-     * @param rs ResultSet containing the nativeItem
      * @return an Iterator containing the list of setSpec values for this nativeItem
      */
-    private Iterator getSetSpecs(HashMap nativeItem) {
+    private Iterator<String> getSetSpecs(Map<String, Object> nativeItem) {
         return null;
     }
 
     /**
      * get an Iterator containing the abouts for the nativeItem
      *
-     * @param rs ResultSet containing the nativeItem
      * @return an Iterator containing the list of about values for this nativeItem
      */
-    private Iterator getAbouts(HashMap nativeItem) {
+    private Iterator getAbouts(Map<String, Object> nativeItem) {
         return null;
     }
 
@@ -547,35 +508,30 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
      * @param set set name or null if no set is desired
      * @param metadataPrefix the OAI metadataPrefix
      * @return a Map object containing an optional "resumptionToken" key/value
-     * pair and a "records" Iterator object. The "records" Iterator contains a
-     * set of Records objects.
-     * @exception OAIBadRequestException signals an http status code 400
-     *            problem
-     * @exception OAIInternalServerError signals an http status code 500
-     *            problem
+     *         pair and a "records" Iterator object. The "records" Iterator contains a
+     *         set of Records objects.
+     * @throws OAIInternalServerError signals an http status code 500 problem
      */
-    public Map listRecords(String from, String until, String set,
-                                    String metadataPrefix)
-      throws CannotDisseminateFormatException,
-      OAIInternalServerError, NoItemsMatchException {
+    public Map<String, Object> listRecords(String from, String until, String set, String metadataPrefix)
+            throws CannotDisseminateFormatException, OAIInternalServerError, NoItemsMatchException {
         purge(); // clean out old resumptionTokens
-        Map listRecordsMap = new HashMap();
-        ArrayList records = new ArrayList();
-	Iterator iterator = fileDateMap.entrySet().iterator();
-	int numRows = fileDateMap.entrySet().size();
-	int count = 0;
-        ArrayList setIdentifiers = (ArrayList)setMap.get(set);
-	while (count < maxListSize && iterator.hasNext()) {
-	    Map.Entry entryDateMap = (Map.Entry)iterator.next();
-            String fileDate = (String)entryDateMap.getValue();
-            String path = (String)entryDateMap.getKey();
-            String extension = path.substring(path.lastIndexOf(".")+1);
+        Map<String, Object> listRecordsMap = new HashMap<String, Object>();
+        List<String> records = new ArrayList<String>();
+        Iterator iterator = fileDateMap.entrySet().iterator();
+        int numRows = fileDateMap.entrySet().size();
+        int count = 0;
+        ArrayList setIdentifiers = (ArrayList) setMap.get(set);
+        while (count < maxListSize && iterator.hasNext()) {
+            Map.Entry entryDateMap = (Map.Entry) iterator.next();
+            String fileDate = (String) entryDateMap.getValue();
+            String path = (String) entryDateMap.getKey();
+            String extension = path.substring(path.lastIndexOf(".") + 1);
             if (fileDate.compareTo(from) >= 0
-                && fileDate.compareTo(until) <= 0
-                && extension.equals(metadataPrefix)
-                && (setIdentifiers == null || setIdentifiers.contains(path))) {
+                    && fileDate.compareTo(until) <= 0
+                    && extension.equals(metadataPrefix)
+                    && (setIdentifiers == null || setIdentifiers.contains(path))) {
                 try {
-                    HashMap nativeItem = getNativeRecord((String)entryDateMap.getKey());
+                    Map<String, Object> nativeItem = getNativeRecord((String) entryDateMap.getKey());
                     String record = constructRecord(nativeItem, metadataPrefix);
                     records.add(record);
                     count++;
@@ -584,42 +540,38 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
                     throw new OAIInternalServerError(e.getMessage());
                 }
             }
-	}
-        
-        if (count == 0)
-            throw new NoItemsMatchException();
-        
-	/* decide if you're done */
-	if (iterator.hasNext()) {
-	    String resumptionId = getRSName();
-	    resumptionResults.put(resumptionId, iterator);
+        }
 
-	    /*****************************************************************
-	     * Construct the resumptionToken String however you see fit.
-	     *****************************************************************/
-	    StringBuffer resumptionTokenSb = new StringBuffer();
-	    resumptionTokenSb.append(resumptionId);
-	    resumptionTokenSb.append(":");
-	    resumptionTokenSb.append(Integer.toString(count));
-	    resumptionTokenSb.append(":");
- 	    resumptionTokenSb.append(Integer.toString(numRows));
- 	    resumptionTokenSb.append(":");
-	    resumptionTokenSb.append(metadataPrefix);
- 	    resumptionTokenSb.append(":");
-	    resumptionTokenSb.append(set);
-            
-	    /*****************************************************************
-	     * Use the following line if you wish to include the optional
-	     * resumptionToken attributes in the response. Otherwise, use the
-	     * line after it that I've commented out.
-	     *****************************************************************/
- 	    listRecordsMap.put("resumptionMap",
- 				   getResumptionMap(resumptionTokenSb.toString(),
- 						    numRows,
- 						    0));
-// 	    listRecordsMap.put("resumptionMap",
-// 				   getResumptionMap(resumptionTokenSb.toString()));
-	}
+        if (count == 0) {
+            throw new NoItemsMatchException();
+        }
+
+        /* decide if you're done */
+        if (iterator.hasNext()) {
+            String resumptionId = getRSName();
+            resumptionResults.put(resumptionId, iterator);
+
+            /*****************************************************************
+             * Construct the resumptionToken String however you see fit.
+             *****************************************************************/
+            StringBuilder resumptionTokenSb = new StringBuilder();
+            resumptionTokenSb.append(resumptionId);
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(Integer.toString(count));
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(Integer.toString(numRows));
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(metadataPrefix);
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(set);
+
+            /*****************************************************************
+             * Use the following line if you wish to include the optional
+             * resumptionToken attributes in the response. Otherwise, use the
+             * line after it that I've commented out.
+             *****************************************************************/
+            listRecordsMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(), numRows, 0));
+        }
         listRecordsMap.put("records", records.iterator());
         return listRecordsMap;
     }
@@ -631,17 +583,15 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
      * @param resumptionToken implementation-dependent format taken from the
      * previous listRecords() Map result.
      * @return a Map object containing an optional "resumptionToken" key/value
-     * pair and a "records" Iterator object. The "records" Iterator contains a
-     * set of Records objects.
-     * @exception OAIBadRequestException signals an http status code 400
-     *            problem
+     *         pair and a "records" Iterator object. The "records" Iterator contains a
+     *         set of Records objects.
+     * problem
      */
-    public Map listRecords(String resumptionToken)
-      throws BadResumptionTokenException {
+    public Map<String, Object> listRecords(String resumptionToken) throws BadResumptionTokenException {
         purge(); // clean out old resumptionTokens
-        Map listRecordsMap = new HashMap();
-        ArrayList records = new ArrayList();
-        
+        Map<String, Object> listRecordsMap = new HashMap<String, Object>();
+        List<String> records = new ArrayList<String>();
+
         /**********************************************************************
          * parse your resumptionToken and look it up in the resumptionResults,
          * if necessary
@@ -650,36 +600,37 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
         String resumptionId;
         int oldCount;
         String metadataPrefix;
-	int numRows;
+        int numRows;
         String set;
         try {
             resumptionId = tokenizer.nextToken();
             oldCount = Integer.parseInt(tokenizer.nextToken());
-	    numRows = Integer.parseInt(tokenizer.nextToken());
+            numRows = Integer.parseInt(tokenizer.nextToken());
             metadataPrefix = tokenizer.nextToken();
             set = tokenizer.nextToken();
         } catch (NoSuchElementException e) {
             throw new BadResumptionTokenException();
         }
 
-	/* Get some more records from your database */
-	Iterator iterator = (Iterator)resumptionResults.remove(resumptionId);
-	if (iterator == null) {
-	    System.out.println("NewFileSystemOAICatalog.listRecords: reuse of old resumptionToken?");
-	    iterator = fileDateMap.entrySet().iterator();
-	    for (int i = 0; i<oldCount; ++i)
-		iterator.next();
-	}
-        
-	/* load the records ArrayLists. */
-	int count = 0;
-        ArrayList setIdentifiers = (ArrayList)setMap.get(set);
-	while (count < maxListSize && iterator.hasNext()) {
-	    Map.Entry entryDateMap = (Map.Entry)iterator.next();
-            String path = (String)entryDateMap.getKey();
+        /* Get some more records from your database */
+        Iterator iterator = (Iterator) resumptionResults.remove(resumptionId);
+        if (iterator == null) {
+            System.out.println("NewFileSystemOAICatalog.listRecords: reuse of old resumptionToken?");
+            iterator = fileDateMap.entrySet().iterator();
+            for (int i = 0; i < oldCount; ++i) {
+                iterator.next();
+            }
+        }
+
+        /* load the records ArrayLists. */
+        int count = 0;
+        ArrayList setIdentifiers = (ArrayList) setMap.get(set);
+        while (count < maxListSize && iterator.hasNext()) {
+            Map.Entry entryDateMap = (Map.Entry) iterator.next();
+            String path = (String) entryDateMap.getKey();
             if (setIdentifiers == null || setIdentifiers.contains(path)) {
                 try {
-                    HashMap nativeItem = getNativeRecord((String)entryDateMap.getKey());
+                    Map<String, Object> nativeItem = getNativeRecord((String) entryDateMap.getKey());
                     String record = constructRecord(nativeItem, metadataPrefix);
                     records.add(record);
                     count++;
@@ -691,98 +642,84 @@ public class NewFileSystemOAICatalog extends AbstractCatalog {
                     throw new BadResumptionTokenException();
                 }
             }
-	}
-        
-	/* decide if you're done. */
-	if (iterator.hasNext()) {
-	    resumptionId = getRSName();
-	    resumptionResults.put(resumptionId, iterator);
-            
-	    /*****************************************************************
-	     * Construct the resumptionToken String however you see fit.
-	     *****************************************************************/
-	    StringBuffer resumptionTokenSb = new StringBuffer();
-	    resumptionTokenSb.append(resumptionId);
-	    resumptionTokenSb.append(":");
-	    resumptionTokenSb.append(Integer.toString(oldCount + count));
-	    resumptionTokenSb.append(":");
-	    resumptionTokenSb.append(Integer.toString(numRows));
-	    resumptionTokenSb.append(":");
-	    resumptionTokenSb.append(metadataPrefix);
-	    resumptionTokenSb.append(":");
-	    resumptionTokenSb.append(set);
-            
-	    /*****************************************************************
-	     * Use the following line if you wish to include the optional
-	     * resumptionToken attributes in the response. Otherwise, use the
-	     * line after it that I've commented out.
-	     *****************************************************************/
-	    listRecordsMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(),
-								     numRows,
-								     oldCount));
-	    //          listRecordsMap.put("resumptionMap",
-	    //                                 getResumptionMap(resumptionTokenSb.toString()));
-	}
+        }
+
+        /* decide if you're done. */
+        if (iterator.hasNext()) {
+            resumptionId = getRSName();
+            resumptionResults.put(resumptionId, iterator);
+
+            /*****************************************************************
+             * Construct the resumptionToken String however you see fit.
+             *****************************************************************/
+            StringBuilder resumptionTokenSb = new StringBuilder();
+            resumptionTokenSb.append(resumptionId);
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(Integer.toString(oldCount + count));
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(Integer.toString(numRows));
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(metadataPrefix);
+            resumptionTokenSb.append(":");
+            resumptionTokenSb.append(set);
+
+            /*****************************************************************
+             * Use the following line if you wish to include the optional
+             * resumptionToken attributes in the response. Otherwise, use the
+             * line after it that I've commented out.
+             *****************************************************************/
+            listRecordsMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(),
+                    numRows,
+                    oldCount));
+            //          listRecordsMap.put("resumptionMap",
+            //                                 getResumptionMap(resumptionTokenSb.toString()));
+        }
 
         listRecordsMap.put("records", records.iterator());
         return listRecordsMap;
     }
 
 
-    public Map listSets() throws NoSetHierarchyException {
-// 	throw new NoSetHierarchyException();
-        if (sets.size() == 0)
+    public Map<String, Object> listSets() throws NoSetHierarchyException {
+        if (sets.size() == 0) {
             throw new NoSetHierarchyException();
-         Map listSetsMap = new LinkedHashMap();
-         listSetsMap.put("sets", sets.iterator());
-         return listSetsMap;
-//         ArrayList result = new ArrayList();
-//         Iterator i = sets.values().iterator();
-//         while (i.hasNext()) {
-//             String value = (String)i.next();
-//             result.add(value);
-//         }
-//         Map listSetsMap = new HashMap();
-//         listSetsMap.put("sets", result.iterator());
-//         return listSetsMap;
+        }
+        Map<String, Object> listSetsMap = new LinkedHashMap<String, Object>();
+        listSetsMap.put("sets", sets.iterator());
+        return listSetsMap;
     }
 
 
-    public Map listSets(String resumptionToken)
-      throws BadResumptionTokenException {
-	throw new BadResumptionTokenException();
+    public Map<String, Object> listSets(String resumptionToken) throws BadResumptionTokenException {
+        throw new BadResumptionTokenException();
     }
 
 
-    /**
-     * close the repository
-     */
-    public void close() { }
+    /** close the repository */
+    public void close() {
+    }
 
 
-    /**
-     * Purge tokens that are older than the time-to-live.
-     */
+    /** Purge tokens that are older than the time-to-live. */
     private void purge() {
-        ArrayList old = new ArrayList();
-        Date      then, now = new Date();
-        Iterator  keySet = resumptionResults.keySet().iterator();
-        String    key;
+        List<String> old = new ArrayList<String>();
+        Date then, now = new Date();
+        Iterator keySet = resumptionResults.keySet().iterator();
+        String key;
 
         while (keySet.hasNext()) {
-            key=(String)keySet.next();
-            then=new Date(Long.parseLong(key)+getMillisecondsToLive());
+            key = (String) keySet.next();
+            then = new Date(Long.parseLong(key) + getMillisecondsToLive());
             if (now.after(then)) {
                 old.add(key);
             }
         }
         Iterator iterator = old.iterator();
         while (iterator.hasNext()) {
-            key = (String)iterator.next();
+            key = (String) iterator.next();
             resumptionResults.remove(key);
         }
     }
-
 
     /**
      * Use the current date as the basis for the resumptiontoken

@@ -10,11 +10,7 @@
  */
 package org.oclc.oai.server.verb;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Properties;
+import java.util.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -31,7 +27,7 @@ import org.oclc.oai.server.catalog.AbstractCatalog;
  * @author Jeffrey A. Young, OCLC Online Computer Library Center
  */
 public class Identify extends ServerVerb {
-    private static ArrayList validParamNames = new ArrayList();
+    private static List<String> validParamNames = new ArrayList<String>();
     static {
         validParamNames.add("verb");
     }
@@ -61,7 +57,7 @@ public class Identify extends ServerVerb {
                 baseURL = request.getRequestURL().toString();
             }
         }
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>");
         String styleSheet = properties.getProperty("OAIHandler.styleSheet");
         if (styleSheet != null) {

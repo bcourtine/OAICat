@@ -86,7 +86,7 @@ public class XerSRURecordFactory extends RecordFactory {
 //            NodeList schemas = XPathAPI.selectNodeList(explainDoc, "/srw:explainResponse/srw:record/srw:recordData/explain:explain/explain:schemaInfo/explain:schema", xmlnsEl);
 //
 //            // Load the formats the repository supports directly
-//            HashMap crosswalkMap = new HashMap();
+//            Map<String, Object> crosswalkMap = new HashMap<String, Object>();
 //            for (int i=0; i<schemas.getLength(); ++i) {
 //                Object[] crosswalkItem = crosswalkItemFactory(schemas.item(i));
 //                for (int j=0; j<crosswalkItem.length; ++j) {
@@ -100,7 +100,7 @@ public class XerSRURecordFactory extends RecordFactory {
 //                }
 //            }
 //
-//            HashMap moreCrosswalkMap = new HashMap();
+//            Map<String, Object> moreCrosswalkMap = new HashMap<String, Object>();
 //
 //            // Now, combine the lists with the originals taking precidence
 //            moreCrosswalkMap.putAll(crosswalkMap);
@@ -113,7 +113,7 @@ public class XerSRURecordFactory extends RecordFactory {
 
 //    public static Object[] crosswalkItemFactory(Node explainSchemaNode)
 //    throws TransformerException, OAIInternalServerError {
-//        ArrayList crosswalkItemList = new ArrayList();
+//        List<String> crosswalkItemList = new ArrayList<String>();
 //        String nativeRecordSchema = XPathAPI.eval(explainSchemaNode, "@identifier", xmlnsEl).str();
 //        String metadataPrefix = XPathAPI.eval(explainSchemaNode, "@name", xmlnsEl).str();
 //        String schema = XPathAPI.eval(explainSchemaNode, "@location", xmlnsEl).str();

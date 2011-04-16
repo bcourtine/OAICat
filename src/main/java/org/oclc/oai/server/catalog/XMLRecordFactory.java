@@ -12,6 +12,7 @@ package org.oclc.oai.server.catalog;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -29,17 +30,18 @@ public class XMLRecordFactory extends RecordFactory {
     private static final String setSpecEnd = "</setSpec>";
     private static final String aboutStart = "<about>";
     private static final String aboutEnd = "</about>";
-    
+
     /**
      * Construct an XMLRecordFactory capable of producing the Crosswalk(s)
      * specified in the properties file.
+     *
      * @param properties Contains information to configure the factory:
-     *                   specifically, the names of the crosswalk(s) supported
-     * @exception IllegalArgumentException Something is wrong with the argument.
+     * specifically, the names of the crosswalk(s) supported
+     * @throws IllegalArgumentException Something is wrong with the argument.
      */
     public XMLRecordFactory(Properties properties)
-	throws IllegalArgumentException {
-	super(properties);
+            throws IllegalArgumentException {
+        super(properties);
     }
 
     /**
@@ -49,7 +51,7 @@ public class XMLRecordFactory extends RecordFactory {
      * @return local identifier (e.g. ID/12345).
      */
     public String fromOAIIdentifier(String identifier) {
-	return identifier;
+        return identifier;
     }
 
     /**
@@ -59,10 +61,10 @@ public class XMLRecordFactory extends RecordFactory {
      * @return OAI identifier
      */
     public String getOAIIdentifier(Object nativeItem) {
-	String xmlRec = (String)nativeItem;
-	int startOffset = xmlRec.indexOf(identifierStart);
-	int endOffset = xmlRec.indexOf(identifierEnd);
-	return xmlRec.substring(startOffset + identifierStart.length(), endOffset);
+        String xmlRec = (String) nativeItem;
+        int startOffset = xmlRec.indexOf(identifierStart);
+        int endOffset = xmlRec.indexOf(identifierEnd);
+        return xmlRec.substring(startOffset + identifierStart.length(), endOffset);
     }
 
     /**
@@ -70,14 +72,14 @@ public class XMLRecordFactory extends RecordFactory {
      *
      * @param nativeItem a native item presumably containing a datestamp somewhere
      * @return a String containing the datestamp for the item
-     * @exception IllegalArgumentException Something is wrong with the argument.
+     * @throws IllegalArgumentException Something is wrong with the argument.
      */
     public String getDatestamp(Object nativeItem)
-	throws IllegalArgumentException  {
-	String xmlRec = (String)nativeItem;
-	int startOffset = xmlRec.indexOf(datestampStart);
-	int endOffset = xmlRec.indexOf(datestampEnd);
-	return xmlRec.substring(startOffset + datestampStart.length(), endOffset);
+            throws IllegalArgumentException {
+        String xmlRec = (String) nativeItem;
+        int startOffset = xmlRec.indexOf(datestampStart);
+        int endOffset = xmlRec.indexOf(datestampEnd);
+        return xmlRec.substring(startOffset + datestampStart.length(), endOffset);
     }
 
     /**
@@ -85,19 +87,19 @@ public class XMLRecordFactory extends RecordFactory {
      *
      * @param nativeItem a native item presumably containing a setspec somewhere
      * @return a String containing the setspec for the item
-     * @exception IllegalArgumentException Something is wrong with the argument.
+     * @throws IllegalArgumentException Something is wrong with the argument.
      */
     public Iterator getSetSpecs(Object nativeItem)
-	throws IllegalArgumentException  {
-	ArrayList list = new ArrayList();
-	String xmlRec = (String)nativeItem;
-	for (int startOffset = xmlRec.indexOf(setSpecStart);
-	     startOffset >= 0;
-	     startOffset = xmlRec.indexOf(setSpecStart, startOffset + 1)) {
-	    int endOffset = xmlRec.indexOf(setSpecEnd, startOffset + 1);
-	    list.add(xmlRec.substring(startOffset + setSpecStart.length(), endOffset));
-	}
-	return list.iterator();
+            throws IllegalArgumentException {
+        List<String> list = new ArrayList<String>();
+        String xmlRec = (String) nativeItem;
+        for (int startOffset = xmlRec.indexOf(setSpecStart);
+             startOffset >= 0;
+             startOffset = xmlRec.indexOf(setSpecStart, startOffset + 1)) {
+            int endOffset = xmlRec.indexOf(setSpecEnd, startOffset + 1);
+            list.add(xmlRec.substring(startOffset + setSpecStart.length(), endOffset));
+        }
+        return list.iterator();
     }
 
     /**
@@ -105,18 +107,18 @@ public class XMLRecordFactory extends RecordFactory {
      *
      * @param nativeItem a native item presumably containing about information somewhere
      * @return a Iterator of Strings containing &lt;about&gt;s for the item
-     * @exception IllegalArgumentException Something is wrong with the argument.
+     * @throws IllegalArgumentException Something is wrong with the argument.
      */
     public Iterator getAbouts(Object nativeItem) throws IllegalArgumentException {
-	ArrayList list = new ArrayList();
-	String xmlRec = (String)nativeItem;
-	for (int startOffset = xmlRec.indexOf(aboutStart);
-	     startOffset >= 0;
-	     startOffset = xmlRec.indexOf(aboutStart, startOffset + 1)) {
-	    int endOffset = xmlRec.indexOf(aboutEnd, startOffset + 1);
-	    list.add(xmlRec.substring(startOffset + aboutStart.length(), endOffset));
-	}
-	return list.iterator();
+        List<String> list = new ArrayList<String>();
+        String xmlRec = (String) nativeItem;
+        for (int startOffset = xmlRec.indexOf(aboutStart);
+             startOffset >= 0;
+             startOffset = xmlRec.indexOf(aboutStart, startOffset + 1)) {
+            int endOffset = xmlRec.indexOf(aboutEnd, startOffset + 1);
+            list.add(xmlRec.substring(startOffset + aboutStart.length(), endOffset));
+        }
+        return list.iterator();
     }
 
     /**
@@ -124,12 +126,12 @@ public class XMLRecordFactory extends RecordFactory {
      *
      * @param nativeItem a native item presumably containing a possible delete indicator
      * @return true if record is deleted, false if not
-     * @exception IllegalArgumentException Something is wrong with the argument.
+     * @throws IllegalArgumentException Something is wrong with the argument.
      */
     public boolean isDeleted(Object nativeItem)
-	throws IllegalArgumentException {
-	String xmlRec = (String)nativeItem;
-	return xmlRec.indexOf("<header status=\"deleted\"") != -1;
+            throws IllegalArgumentException {
+        String xmlRec = (String) nativeItem;
+        return xmlRec.indexOf("<header status=\"deleted\"") != -1;
     }
 
     /**
@@ -137,13 +139,13 @@ public class XMLRecordFactory extends RecordFactory {
      * This is useful, for example, if the entire &lt;record&gt; is already packaged as the native
      * record. Return null if you want the default handler to create it by calling the methods
      * above individually.
-     * 
+     *
      * @param nativeItem the native record
      * @return a String containing the OAI &lt;record&gt; or null if the default method should be
-     * used.
+     *         used.
      */
     public String quickCreate(Object nativeItem, String schemaLocation, String metadataPrefix) {
-	// Don't perform quick creates
-	return null;
+        // Don't perform quick creates
+        return null;
     }
 }

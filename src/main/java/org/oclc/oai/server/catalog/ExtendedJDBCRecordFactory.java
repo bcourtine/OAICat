@@ -11,41 +11,37 @@
 package org.oclc.oai.server.catalog;
 
 import java.sql.Timestamp;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Properties;
-import java.util.StringTokenizer;
+import java.util.*;
 
-/**
- * ExtendedJDBCRecordFactory converts JDBC "items" to "record" Strings.
- */
+/** ExtendedJDBCRecordFactory converts JDBC "items" to "record" Strings. */
 public class ExtendedJDBCRecordFactory extends RecordFactory {
     private String repositoryIdentifier = null;
     protected String identifierLabel = null;
     protected String datestampLabel = null;
-    
+
     /**
      * Construct an ExtendedJDBCRecordFactory capable of producing the Crosswalk(s)
      * specified in the properties file.
+     *
      * @param properties Contains information to configure the factory:
-     *                   specifically, the names of the crosswalk(s) supported
-     * @exception IllegalArgumentException Something is wrong with the argument.
+     * specifically, the names of the crosswalk(s) supported
+     * @throws IllegalArgumentException Something is wrong with the argument.
      */
     public ExtendedJDBCRecordFactory(Properties properties)
-	throws IllegalArgumentException {
-	super(properties);
-	repositoryIdentifier = properties.getProperty("ExtendedJDBCRecordFactory.repositoryIdentifier");
-	if (repositoryIdentifier == null) {
-	    throw new IllegalArgumentException("ExtendedJDBCRecordFactory.repositoryIdentifier is missing from the properties file");
-	}
-	identifierLabel = properties.getProperty("ExtendedJDBCRecordFactory.identifierLabel");
-	if (identifierLabel == null) {
-	    throw new IllegalArgumentException("ExtendedJDBCRecordFactory.identifierLabel is missing from the properties file");
-	}
-	datestampLabel = properties.getProperty("ExtendedJDBCRecordFactory.datestampLabel");
-	if (datestampLabel == null) {
-	    throw new IllegalArgumentException("ExtendedJDBCRecordFactory.datestampLabel is missing from the properties file");
-	}
+            throws IllegalArgumentException {
+        super(properties);
+        repositoryIdentifier = properties.getProperty("ExtendedJDBCRecordFactory.repositoryIdentifier");
+        if (repositoryIdentifier == null) {
+            throw new IllegalArgumentException("ExtendedJDBCRecordFactory.repositoryIdentifier is missing from the properties file");
+        }
+        identifierLabel = properties.getProperty("ExtendedJDBCRecordFactory.identifierLabel");
+        if (identifierLabel == null) {
+            throw new IllegalArgumentException("ExtendedJDBCRecordFactory.identifierLabel is missing from the properties file");
+        }
+        datestampLabel = properties.getProperty("ExtendedJDBCRecordFactory.datestampLabel");
+        if (datestampLabel == null) {
+            throw new IllegalArgumentException("ExtendedJDBCRecordFactory.datestampLabel is missing from the properties file");
+        }
     }
 
     /**
@@ -55,14 +51,14 @@ public class ExtendedJDBCRecordFactory extends RecordFactory {
      * @return local identifier (e.g. ID/12345).
      */
     public String fromOAIIdentifier(String oaiIdentifier) {
-	StringTokenizer tokenizer = new StringTokenizer(oaiIdentifier, ":");
-	try {
-	    tokenizer.nextToken();
-	    tokenizer.nextToken();
-	    return tokenizer.nextToken();
-	} catch (java.util.NoSuchElementException e) {
-	    return null;
-	}
+        StringTokenizer tokenizer = new StringTokenizer(oaiIdentifier, ":");
+        try {
+            tokenizer.nextToken();
+            tokenizer.nextToken();
+            return tokenizer.nextToken();
+        } catch (java.util.NoSuchElementException e) {
+            return null;
+        }
     }
 
     /**
@@ -72,14 +68,8 @@ public class ExtendedJDBCRecordFactory extends RecordFactory {
      * @return local identifier
      */
     public String getLocalIdentifier(Object nativeItem) {
-// 	throws IllegalArgumentException {
-// 	try {
-	    HashMap table = (HashMap)((HashMap)nativeItem).get("coreResult");
-	    return table.get(identifierLabel).toString();
-// 	} catch (SQLException e) {
-// 	    e.printStackTrace();
-// 	    throw new IllegalArgumentException(e.getMessage());
-// 	}
+        Map<String, Object> table = (Map<String, Object>) ((Map<String, Object>) nativeItem).get("coreResult");
+        return table.get(identifierLabel).toString();
     }
 
     /**
@@ -88,14 +78,13 @@ public class ExtendedJDBCRecordFactory extends RecordFactory {
      * @param nativeItem native Item object
      * @return OAI identifier
      */
-    public String getOAIIdentifier(Object nativeItem)
-	throws IllegalArgumentException {
-	StringBuffer sb = new StringBuffer();
-	sb.append("oai:");
-	sb.append(repositoryIdentifier);
-	sb.append(":");
-	sb.append(getLocalIdentifier(nativeItem));
-	return sb.toString();
+    public String getOAIIdentifier(Object nativeItem) throws IllegalArgumentException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("oai:");
+        sb.append(repositoryIdentifier);
+        sb.append(":");
+        sb.append(getLocalIdentifier(nativeItem));
+        return sb.toString();
     }
 
     /**
@@ -103,17 +92,11 @@ public class ExtendedJDBCRecordFactory extends RecordFactory {
      *
      * @param nativeItem a native item presumably containing a datestamp somewhere
      * @return a String containing the datestamp for the item
-     * @exception IllegalArgumentException Something is wrong with the argument.
+     * @throws IllegalArgumentException Something is wrong with the argument.
      */
     public String getDatestamp(Object nativeItem) {
-// 	throws IllegalArgumentException  {
-// 	try {
-	    HashMap table = (HashMap)((HashMap)nativeItem).get("coreResult");
-	    return ((Timestamp)table.get(datestampLabel)).toString().substring(0, 10);
-// 	} catch (SQLException e) {
-// 	    e.printStackTrace();
-// 	    throw new IllegalArgumentException(e.getMessage());
-// 	}
+        Map<String, Object> table = (HashMap) ((HashMap) nativeItem).get("coreResult");
+        return ((Timestamp) table.get(datestampLabel)).toString().substring(0, 10);
     }
 
     /**
@@ -121,12 +104,11 @@ public class ExtendedJDBCRecordFactory extends RecordFactory {
      *
      * @param nativeItem a native item presumably containing a setspec somewhere
      * @return a String containing the setspec for the item. Null if setSpecs aren't
-     * derived from the nativeItem.
-     * @exception IllegalArgumentException Something is wrong with the argument.
+     *         derived from the nativeItem.
+     * @throws IllegalArgumentException Something is wrong with the argument.
      */
-    public Iterator getSetSpecs(Object nativeItem)
-	throws IllegalArgumentException  {
-	return null;
+    public Iterator getSetSpecs(Object nativeItem) throws IllegalArgumentException {
+        return null;
     }
 
     /**
@@ -134,11 +116,11 @@ public class ExtendedJDBCRecordFactory extends RecordFactory {
      *
      * @param nativeItem a native item presumably containing about information somewhere
      * @return a Iterator of Strings containing &lt;about&gt;s for the item. Null if
-     * abouts aren't derived from the nativeItem
-     * @exception IllegalArgumentException Something is wrong with the argument.
+     *         abouts aren't derived from the nativeItem
+     * @throws IllegalArgumentException Something is wrong with the argument.
      */
     public Iterator getAbouts(Object nativeItem) throws IllegalArgumentException {
-	return null;
+        return null;
     }
 
     /**
@@ -146,11 +128,10 @@ public class ExtendedJDBCRecordFactory extends RecordFactory {
      *
      * @param nativeItem a native item presumably containing a possible delete indicator
      * @return true if record is deleted, false if not
-     * @exception IllegalArgumentException Something is wrong with the argument.
+     * @throws IllegalArgumentException Something is wrong with the argument.
      */
-    public boolean isDeleted(Object nativeItem)
-	throws IllegalArgumentException {
-	return false;
+    public boolean isDeleted(Object nativeItem) throws IllegalArgumentException {
+        return false;
     }
 
     /**
@@ -158,13 +139,12 @@ public class ExtendedJDBCRecordFactory extends RecordFactory {
      * This is useful, for example, if the entire &lt;record&gt; is already packaged as the native
      * record. Return null if you want the default handler to create it by calling the methods
      * above individually.
-     * 
+     *
      * @param nativeItem the native record
-     * @return a String containing the OAI &lt;record&gt; or null if the default method should be
-     * used.
+     * @return a String containing the OAI &lt;record&gt; or null if the default method should be used.
      */
     public String quickCreate(Object nativeItem, String schemaLocation, String metadataPrefix) {
-	// Don't perform quick creates
-	return null;
+        // Don't perform quick creates
+        return null;
     }
 }

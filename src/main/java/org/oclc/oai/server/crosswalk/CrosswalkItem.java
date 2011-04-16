@@ -117,7 +117,7 @@ public class CrosswalkItem {
     public int getRank() { return rank; }
 
     public String toString() {
-	StringBuffer sb = new StringBuffer();
+	StringBuilder sb = new StringBuilder();
 	sb.append("CrosswalkItem: " );
 	sb.append(getNativeRecordSchema());
 	sb.append(":");

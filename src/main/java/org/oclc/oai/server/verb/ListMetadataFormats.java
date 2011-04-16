@@ -17,7 +17,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.StringTokenizer;
-import java.util.Vector;
+import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -36,12 +36,15 @@ import org.oclc.oai.server.crosswalk.Crosswalks;
  * @author Jeffrey A. Young, OCLC Online Computer Library Center
  */
 public class ListMetadataFormats extends ServerVerb {
-    private static ArrayList validParamNames = new ArrayList();
+    private static List<String> validParamNames = new ArrayList<String>();
+
     static {
         validParamNames.add("verb");
         validParamNames.add("identifier");
     }
-    private static ArrayList requiredParamNames = new ArrayList();
+
+    private static List<String> requiredParamNames = new ArrayList<String>();
+
     static {
         requiredParamNames.add("verb");
     }
@@ -51,18 +54,16 @@ public class ListMetadataFormats extends ServerVerb {
      *
      * @param context the servlet context
      * @param request the servlet request
-     * @exception OAIBadRequestException an http 400 status code problem
-     * @exception OAINotFoundException an http 404 status code problem
-     * @exception OAIInternalServerError an http 500 status code problem
+     * @throws OAIInternalServerError an http 500 status code problem
      */
     public static String construct(HashMap context,
             HttpServletRequest request,
             HttpServletResponse response,
             Transformer serverTransformer)
-    throws OAIInternalServerError, TransformerException {
-        Properties properties = (Properties)context.get("OAIHandler.properties");
+            throws OAIInternalServerError, TransformerException {
+        Properties properties = (Properties) context.get("OAIHandler.properties");
         AbstractCatalog abstractCatalog =
-            (AbstractCatalog)context.get("OAIHandler.catalog");
+                (AbstractCatalog) context.get("OAIHandler.catalog");
         String baseURL = properties.getProperty("OAIHandler.baseURL");
         if (baseURL == null) {
             try {
@@ -71,7 +72,7 @@ public class ListMetadataFormats extends ServerVerb {
                 baseURL = request.getRequestURL().toString();
             }
         }
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         String identifier = request.getParameter("identifier");
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>");
         String styleSheet = properties.getProperty("OAIHandler.styleSheet");
@@ -100,9 +101,9 @@ public class ListMetadataFormats extends ServerVerb {
                 Iterator iterator = crosswalks.iterator();
                 sb.append("<ListMetadataFormats>");
                 while (iterator.hasNext()) {
-                    Map.Entry entry = (Map.Entry)iterator.next();
-                    String oaiSchemaLabel = (String)entry.getKey();
-                    CrosswalkItem crosswalkItem = (CrosswalkItem)entry.getValue();
+                    Map.Entry entry = (Map.Entry) iterator.next();
+                    String oaiSchemaLabel = (String) entry.getKey();
+                    CrosswalkItem crosswalkItem = (CrosswalkItem) entry.getValue();
                     Crosswalk crosswalk = crosswalkItem.getCrosswalk();
 //                  StringTokenizer tokenizer = new StringTokenizer(crosswalk.getSchemaLocation());
 //                  String namespaceURI = tokenizer.nextToken();
@@ -125,7 +126,7 @@ public class ListMetadataFormats extends ServerVerb {
                     sb.append("</schema>");
                     sb.append("<metadataNamespace>");
                     if (namespaceURI != null) {
-                    	sb.append(namespaceURI);
+                        sb.append(namespaceURI);
                     }
                     sb.append("</metadataNamespace>");
                     sb.append("</metadataFormat>");
@@ -133,13 +134,10 @@ public class ListMetadataFormats extends ServerVerb {
                 sb.append("</ListMetadataFormats>");
             } else {
                 try {
-                    Vector schemaLocations = abstractCatalog.getSchemaLocations(identifier);
+                    List<String> schemaLocations = abstractCatalog.getSchemaLocations(identifier);
                     sb.append("<ListMetadataFormats>");
-                    for (int i=0; i<schemaLocations.size(); ++i) {
-                        String schemaLocation = (String)schemaLocations.elementAt(i);
-//                      StringTokenizer tokenizer = new StringTokenizer(schemaLocation);
-//                      String namespaceURI = tokenizer.nextToken();
-//                      String schemaURL = tokenizer.nextToken();
+                    for (int i = 0; i < schemaLocations.size(); ++i) {
+                        String schemaLocation = schemaLocations.get(i);
                         String[] tokenizer = split(schemaLocation);
                         String namespaceURI = null;
                         String schemaURL = null;
@@ -159,7 +157,7 @@ public class ListMetadataFormats extends ServerVerb {
                         sb.append("</schema>");
                         sb.append("<metadataNamespace>");
                         if (namespaceURI != null) {
-                        	sb.append(namespaceURI);
+                            sb.append(namespaceURI);
                         }
                         sb.append("</metadataNamespace>");
                         sb.append("</metadataFormat>");
@@ -179,7 +177,7 @@ public class ListMetadataFormats extends ServerVerb {
     private static String[] split(String s) {
         StringTokenizer tokenizer = new StringTokenizer(s);
         String[] tokens = new String[tokenizer.countTokens()];
-        for (int i=0; i<tokens.length; ++i) {
+        for (int i = 0; i < tokens.length; ++i) {
             tokens[i] = tokenizer.nextToken();
         }
         return tokens;

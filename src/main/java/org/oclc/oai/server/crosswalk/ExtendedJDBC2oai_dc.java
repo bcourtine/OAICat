@@ -11,6 +11,7 @@
 package org.oclc.oai.server.crosswalk;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 import org.oclc.oai.util.OAIUtil;
@@ -98,11 +99,10 @@ public class ExtendedJDBC2oai_dc extends Crosswalk {
 	Object dcRelation = null;
 	Object dcCoverage = null;
 	Object dcRights = null;
-	HashMap coreTable = (HashMap)((HashMap)nativeItem).get("coreResult");
-	StringBuffer sb = new StringBuffer();
+	Map<String, Object> coreTable = (Map<String, Object>)((Map<String, Object>)nativeItem).get("coreResult");
+	StringBuilder sb = new StringBuilder();
 	sb.append("<oai_dc:dc xmlns:oai_dc=\"http://www.openarchives.org/OAI/2.0/oai_dc/\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\""
-		  + getSchemaLocation()
-		  + "\">");
+		  + getSchemaLocation() + "\">");
 
 
 	if (dcTitleLabel != null

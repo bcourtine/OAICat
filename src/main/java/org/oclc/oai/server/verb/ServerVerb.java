@@ -18,13 +18,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Properties;
-import java.util.TimeZone;
+import java.util.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -112,7 +106,7 @@ public abstract class ServerVerb {
      * @return a String representation of the OAI response Date.
      */
     public static String createResponseDate(Date date) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
         TimeZone tz = TimeZone.getTimeZone("UTC");
         formatter.setTimeZone(tz);
@@ -120,17 +114,12 @@ public abstract class ServerVerb {
         return sb.toString();
     }
 
-    protected static String getRequestElement(HttpServletRequest request,
-            List validParamNames,
-            String baseURL) {
+    protected static String getRequestElement(HttpServletRequest request, List validParamNames, String baseURL) {
         return getRequestElement(request, validParamNames, baseURL, false);
     }
 
-    protected static String getRequestElement(HttpServletRequest request,
-            List validParamNames,
-            String baseURL,
-            boolean xmlEncodeSetSpec) {
-        StringBuffer sb = new StringBuffer();
+    protected static String getRequestElement(HttpServletRequest request, List validParamNames, String baseURL, boolean xmlEncodeSetSpec) {
+        StringBuilder sb = new StringBuilder();
         sb.append("<request");
         Enumeration params = request.getParameterNames();
         while (params.hasMoreElements()) {
@@ -142,13 +131,7 @@ public abstract class ServerVerb {
                     sb.append(name);
                     sb.append("=\"");
                     if (!xmlEncodeSetSpec && "set".equals(name)) {
-//                      try {
                         sb.append(value);
-//                      sb.append(URLEncoder.encode(value, "UTF-8"));
-//                      } catch (UnsupportedEncodingException e) {
-//                      e.printStackTrace();
-//                      sb.append("UnsupportedEncodingException");
-//                      }
                     } else {
                         sb.append(OAIUtil.xmlEncode(value));
                     }
@@ -193,30 +176,6 @@ public abstract class ServerVerb {
         return false;
     }
 
-//  /**
-//  * Get the OAI requestURL from the verb response
-//  *
-//  * @param request the HTTP servlet request object
-//  * @return the current verb's requestURL value
-//  */
-//  protected static String getRequestURL(HttpServletRequest request) {
-//  StringBuffer sb = new StringBuffer();
-//  sb.append(HttpUtils.getRequestURL(request));
-//  sb.append("?");
-//  Enumeration params = request.getParameterNames();
-//  while (params.hasMoreElements()) {
-//  String name = (String)params.nextElement();
-//  String value = request.getParameter(name);
-//  sb.append(OAIUtil.xmlEncode(name));
-//  sb.append("=");
-//  sb.append(OAIUtil.xmlEncode(value));
-//  if (params.hasMoreElements()) {
-//  sb.append("&amp;");
-//  }
-//  }
-//  return sb.toString();
-//  }
-
     /**
      * Get the complete XML response for the verb request
      *
@@ -226,8 +185,7 @@ public abstract class ServerVerb {
         return xmlText;
     }
 
-    protected static String render(HttpServletResponse response, String contentType, String result,
-            Transformer transformer) throws TransformerException {
+    protected static String render(HttpServletResponse response, String contentType, String result, Transformer transformer) throws TransformerException {
         String renderedResult = null;
         if (transformer != null) { // render on the server
             response.setContentType("text/html; charset=UTF-8");
@@ -245,8 +203,8 @@ public abstract class ServerVerb {
         return renderedResult;
     }
 
-    public static HashMap getVerbs(Properties properties) {
-        HashMap serverVerbsMap = new HashMap();
+    public static Map<String, Class<?>> getVerbs(Properties properties) {
+        Map<String, Class<?>> serverVerbsMap = new HashMap<String, Class<?>>();
         serverVerbsMap.put("ListRecords", ListRecords.class);
         serverVerbsMap.put("ListIdentifiers", ListIdentifiers.class);
         serverVerbsMap.put("GetRecord", GetRecord.class);
@@ -256,8 +214,8 @@ public abstract class ServerVerb {
         return serverVerbsMap;
     }
 
-    public static HashMap getExtensionVerbs(Properties properties) {
-        HashMap extensionVerbsMap = new HashMap();
+    public static Map<String, Class<?>> getExtensionVerbs(Properties properties) {
+        Map<String, Class<?>> extensionVerbsMap = new HashMap<String, Class<?>>();
         String propertyPrefix = "ExtensionVerbs.";
         Enumeration propNames = properties.propertyNames();
         while (propNames.hasMoreElements()) {
@@ -271,11 +229,9 @@ public abstract class ServerVerb {
                 }
                 try {
                     Class serverVerbClass = Class.forName(verbClassName);
-                    Method init =
-                        serverVerbClass.getMethod("init",
-                                new Class[] {Properties.class});
+                    Method init = serverVerbClass.getMethod("init", new Class[] {Properties.class});
                     try {
-                        init.invoke(null, new Object[] {properties});
+                        init.invoke(null, properties);
                     } catch (InvocationTargetException e) {
                         throw e.getTargetException();
                     }

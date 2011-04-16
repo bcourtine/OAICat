@@ -96,18 +96,16 @@ public class DummyOAICatalog extends AbstractCatalog {
     }
 
     /**
-     * Retrieve a list of schemaLocation values associated with the specified
-     * identifier.
+     * Retrieve a list of schemaLocation values associated with the specified identifier.
      *
      * @param identifier the OAI identifier
-     * @return a Vector containing schemaLocation Strings
+     * @return a List<String> containing schemaLocation Strings
      * @throws IdDoesNotExistException the specified identifier can't be found
      * @throws NoMetadataFormatsException the specified identifier was found
      * but the item is flagged as deleted and thus no schemaLocations (i.e.
      * metadataFormats) can be produced.
      */
-    public Vector getSchemaLocations(String identifier)
-            throws IdDoesNotExistException, NoMetadataFormatsException {
+    public List<String> getSchemaLocations(String identifier) throws IdDoesNotExistException, NoMetadataFormatsException {
         /**********************************************************************
          * YOUR CODE GOES HERE
          * Retrieve the specified native item from your database.
@@ -189,7 +187,7 @@ public class DummyOAICatalog extends AbstractCatalog {
             /*****************************************************************
              * Construct the resumptionToken String however you see fit.
              *****************************************************************/
-            StringBuffer resumptionTokenSb = new StringBuffer();
+            StringBuilder resumptionTokenSb = new StringBuilder();
             resumptionTokenSb.append(resumptionId);
             resumptionTokenSb.append(":");
             resumptionTokenSb.append(Integer.toString(count));
@@ -280,7 +278,7 @@ public class DummyOAICatalog extends AbstractCatalog {
             /*****************************************************************
              * Construct the resumptionToken String however you see fit.
              *****************************************************************/
-            StringBuffer resumptionTokenSb = new StringBuffer();
+            StringBuilder resumptionTokenSb = new StringBuilder();
             resumptionTokenSb.append(resumptionId);
             resumptionTokenSb.append(":");
             resumptionTokenSb.append(Integer.toString(oldCount + count));
@@ -387,7 +385,7 @@ public class DummyOAICatalog extends AbstractCatalog {
             /*****************************************************************
              * Construct the resumptionToken String however you see fit.
              *****************************************************************/
-            StringBuffer resumptionTokenSb = new StringBuffer();
+            StringBuilder resumptionTokenSb = new StringBuilder();
             resumptionTokenSb.append(resumptionId);
             resumptionTokenSb.append(":");
             resumptionTokenSb.append(Integer.toString(count));
@@ -479,7 +477,7 @@ public class DummyOAICatalog extends AbstractCatalog {
             /*****************************************************************
              * Construct the resumptionToken String however you see fit.
              *****************************************************************/
-            StringBuffer resumptionTokenSb = new StringBuffer();
+            StringBuilder resumptionTokenSb = new StringBuilder();
             resumptionTokenSb.append(resumptionId);
             resumptionTokenSb.append(":");
             resumptionTokenSb.append(Integer.toString(oldCount + count));
@@ -563,7 +561,7 @@ public class DummyOAICatalog extends AbstractCatalog {
             /*****************************************************************
              * Construct the resumptionToken String however you see fit.
              *****************************************************************/
-            StringBuffer resumptionTokenSb = new StringBuffer();
+            StringBuilder resumptionTokenSb = new StringBuilder();
             resumptionTokenSb.append(resumptionId);
             resumptionTokenSb.append(":");
             resumptionTokenSb.append(Integer.toString(count));
@@ -645,7 +643,7 @@ public class DummyOAICatalog extends AbstractCatalog {
             /*****************************************************************
              * Construct the resumptionToken String however you see fit.
              *****************************************************************/
-            StringBuffer resumptionTokenSb = new StringBuffer();
+            StringBuilder resumptionTokenSb = new StringBuilder();
             resumptionTokenSb.append(resumptionId);
             resumptionTokenSb.append(":");
             resumptionTokenSb.append(Integer.toString(oldCount + count));

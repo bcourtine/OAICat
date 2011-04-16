@@ -64,7 +64,7 @@ public class FileRecordFactory extends RecordFactory {
      * @return OAI identifier
      */
     public String getOAIIdentifier(Object nativeItem) {
-	StringBuffer sb = new StringBuffer();
+	StringBuilder sb = new StringBuilder();
 	sb.append("oai:");
 	sb.append(repositoryIdentifier);
 	sb.append(":");

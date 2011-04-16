@@ -16,15 +16,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Properties;
-import java.util.StringTokenizer;
-import java.util.Vector;
+import java.util.*;
 
 import org.oclc.oai.server.verb.BadResumptionTokenException;
 import org.oclc.oai.server.verb.CannotDisseminateFormatException;
@@ -144,8 +136,8 @@ public class FileSystemOAICatalog extends AbstractCatalog {
         return dateFormatter.format(date);
     }
 
-    private HashMap getNativeHeader(String localIdentifier) {
-        HashMap recordMap = null;
+    private Map<String, Object> getNativeHeader(String localIdentifier) {
+        Map<String, Object> recordMap = null;
         if (fileDateMap.containsKey(localIdentifier)) {
             recordMap = new HashMap();
             recordMap.put("localIdentifier", localIdentifier);
@@ -155,9 +147,9 @@ public class FileSystemOAICatalog extends AbstractCatalog {
         return recordMap;
     }
     
-    private HashMap getNativeRecord(String localIdentifier)
+    private Map<String, Object> getNativeRecord(String localIdentifier)
         throws IOException {
-        HashMap recordMap = getNativeHeader(localIdentifier);
+        Map<String, Object> recordMap = getNativeHeader(localIdentifier);
         if (recordMap == null) {
             return null;
         } else {
@@ -191,7 +183,7 @@ public class FileSystemOAICatalog extends AbstractCatalog {
     public String getRecord(String oaiIdentifier, String metadataPrefix)
         throws IdDoesNotExistException, CannotDisseminateFormatException,
                OAIInternalServerError {
-        HashMap nativeItem = null;
+        Map<String, Object> nativeItem = null;
         try {
 	    String localIdentifier
 		= getRecordFactory().fromOAIIdentifier(oaiIdentifier);
@@ -217,16 +209,16 @@ public class FileSystemOAICatalog extends AbstractCatalog {
      * response to this is static;
      *
      * @param oaiIdentifier the OAI identifier
-     * @return a Vector containing schemaLocation Strings
+     * @return a List<String> containing schemaLocation Strings
      * @exception OAIBadRequestException signals an http status code 400
      *            problem
      * @exception OAINotFoundException signals an http status code 404 problem
      * @exception OAIInternalServerError signals an http status code 500
      *            problem
      */
-    public Vector getSchemaLocations(String oaiIdentifier)
+    public List<String> getSchemaLocations(String oaiIdentifier)
       throws IdDoesNotExistException, OAIInternalServerError, NoMetadataFormatsException {
-        HashMap nativeItem = null;
+        Map<String, Object> nativeItem = null;
         try {
 	    String localIdentifier
 		= getRecordFactory().fromOAIIdentifier(oaiIdentifier);
@@ -262,9 +254,9 @@ public class FileSystemOAICatalog extends AbstractCatalog {
     public Map listIdentifiers(String from, String until, String set, String metadataPrefix)
         throws NoItemsMatchException {
         purge(); // clean out old resumptionTokens
-        Map listIdentifiersMap = new HashMap();
-        ArrayList headers = new ArrayList();
-        ArrayList identifiers = new ArrayList();
+        Map<String, Object> listIdentifiersMap = new HashMap<String, Object>();
+        List<String> headers = new ArrayList<String>();
+        List<String> identifiers = new ArrayList<String>();
 	Iterator iterator = fileDateMap.entrySet().iterator();
 	int numRows = fileDateMap.entrySet().size();
 	int count = 0;
@@ -273,7 +265,7 @@ public class FileSystemOAICatalog extends AbstractCatalog {
             String fileDate = (String)entryDateMap.getValue();
             if (fileDate.compareTo(from) >= 0
                 && fileDate.compareTo(until) <= 0) {
-                HashMap nativeHeader = getNativeHeader((String)entryDateMap.getKey());
+                Map<String, Object> nativeHeader = getNativeHeader((String)entryDateMap.getKey());
                 String[] header = getRecordFactory().createHeader(nativeHeader);
                 headers.add(header[0]);
                 identifiers.add(header[1]);
@@ -292,7 +284,7 @@ public class FileSystemOAICatalog extends AbstractCatalog {
 	    /*****************************************************************
 	     * Construct the resumptionToken String however you see fit.
 	     *****************************************************************/
-	    StringBuffer resumptionTokenSb = new StringBuffer();
+	    StringBuilder resumptionTokenSb = new StringBuilder();
 	    resumptionTokenSb.append(resumptionId);
 	    resumptionTokenSb.append(":");
 	    resumptionTokenSb.append(Integer.toString(count));
@@ -333,9 +325,9 @@ public class FileSystemOAICatalog extends AbstractCatalog {
     public Map listIdentifiers(String resumptionToken)
       throws BadResumptionTokenException {
         purge(); // clean out old resumptionTokens
-        Map listIdentifiersMap = new HashMap();
-        ArrayList headers = new ArrayList();
-        ArrayList identifiers = new ArrayList();
+        Map<String, Object> listIdentifiersMap = new HashMap<String, Object>();
+        List<String> headers = new ArrayList<String>();
+        List<String> identifiers = new ArrayList<String>();
         
         /**********************************************************************
          * parse your resumptionToken and look it up in the resumptionResults,
@@ -368,7 +360,7 @@ public class FileSystemOAICatalog extends AbstractCatalog {
 	int count = 0;
 	while (count < maxListSize && iterator.hasNext()) {
 	    Map.Entry entryDateMap = (Map.Entry)iterator.next();
-	    HashMap nativeHeader = getNativeHeader((String)entryDateMap.getKey());
+	    Map<String, Object> nativeHeader = getNativeHeader((String)entryDateMap.getKey());
 		String[] header = getRecordFactory().createHeader(nativeHeader);
 		headers.add(header[0]);
 		identifiers.add(header[1]);
@@ -383,7 +375,7 @@ public class FileSystemOAICatalog extends AbstractCatalog {
 	    /*****************************************************************
 	     * Construct the resumptionToken String however you see fit.
 	     *****************************************************************/
-	    StringBuffer resumptionTokenSb = new StringBuffer();
+	    StringBuilder resumptionTokenSb = new StringBuilder();
 	    resumptionTokenSb.append(resumptionId);
 	    resumptionTokenSb.append(":");
 	    resumptionTokenSb.append(Integer.toString(oldCount + count));
@@ -414,13 +406,14 @@ public class FileSystemOAICatalog extends AbstractCatalog {
      * Utility method to construct a Record object for a specified
      * metadataFormat from a native record
      *
+     *
      * @param nativeItem native item from the dataase
      * @param metadataPrefix the desired metadataPrefix for performing the crosswalk
      * @return the <record/> String
      * @exception CannotDisseminateFormatException the record is not available
      * for the specified metadataPrefix.
      */
-    private String constructRecord(HashMap nativeItem, String metadataPrefix)
+    private String constructRecord(Map<String, Object> nativeItem, String metadataPrefix)
         throws CannotDisseminateFormatException {
         String schemaURL = null;
 	Iterator setSpecs = getSetSpecs(nativeItem);
@@ -436,20 +429,18 @@ public class FileSystemOAICatalog extends AbstractCatalog {
     /**
      * get an Iterator containing the setSpecs for the nativeItem
      *
-     * @param rs ResultSet containing the nativeItem
      * @return an Iterator containing the list of setSpec values for this nativeItem
      */
-    private Iterator getSetSpecs(HashMap nativeItem) {
+    private Iterator getSetSpecs(Map<String, Object> nativeItem) {
         return null;
     }
 
     /**
      * get an Iterator containing the abouts for the nativeItem
      *
-     * @param rs ResultSet containing the nativeItem
      * @return an Iterator containing the list of about values for this nativeItem
      */
-    private Iterator getAbouts(HashMap nativeItem) {
+    private Iterator getAbouts(Map<String, Object> nativeItem) {
         return null;
     }
 
@@ -475,8 +466,8 @@ public class FileSystemOAICatalog extends AbstractCatalog {
       throws CannotDisseminateFormatException,
       OAIInternalServerError, NoItemsMatchException {
         purge(); // clean out old resumptionTokens
-        Map listRecordsMap = new HashMap();
-        ArrayList records = new ArrayList();
+        Map<String, Object> listRecordsMap = new HashMap<String, Object>();
+        List<String> records = new ArrayList<String>();
 	Iterator iterator = fileDateMap.entrySet().iterator();
 	int numRows = fileDateMap.entrySet().size();
 	int count = 0;
@@ -486,7 +477,7 @@ public class FileSystemOAICatalog extends AbstractCatalog {
             if (fileDate.compareTo(from) >= 0
                 && fileDate.compareTo(until) <= 0) {
                 try {
-                    HashMap nativeItem = getNativeRecord((String)entryDateMap.getKey());
+                    Map<String, Object> nativeItem = getNativeRecord((String)entryDateMap.getKey());
                     String record = constructRecord(nativeItem, metadataPrefix);
                     records.add(record);
                     count++;
@@ -508,7 +499,7 @@ public class FileSystemOAICatalog extends AbstractCatalog {
 	    /*****************************************************************
 	     * Construct the resumptionToken String however you see fit.
 	     *****************************************************************/
-	    StringBuffer resumptionTokenSb = new StringBuffer();
+	    StringBuilder resumptionTokenSb = new StringBuilder();
 	    resumptionTokenSb.append(resumptionId);
 	    resumptionTokenSb.append(":");
 	    resumptionTokenSb.append(Integer.toString(count));
@@ -548,8 +539,8 @@ public class FileSystemOAICatalog extends AbstractCatalog {
     public Map listRecords(String resumptionToken)
       throws BadResumptionTokenException {
         purge(); // clean out old resumptionTokens
-        Map listRecordsMap = new HashMap();
-        ArrayList records = new ArrayList();
+        Map<String, Object> listRecordsMap = new HashMap<String, Object>();
+        List<String> records = new ArrayList<String>();
         
         /**********************************************************************
          * parse your resumptionToken and look it up in the resumptionResults,
@@ -583,7 +574,7 @@ public class FileSystemOAICatalog extends AbstractCatalog {
 	while (count < maxListSize && iterator.hasNext()) {
 	    Map.Entry entryDateMap = (Map.Entry)iterator.next();
 	    try {
-                HashMap nativeItem = getNativeRecord((String)entryDateMap.getKey());
+                Map<String, Object> nativeItem = getNativeRecord((String)entryDateMap.getKey());
                 String record = constructRecord(nativeItem, metadataPrefix);
                 records.add(record);
                 count++;
@@ -604,7 +595,7 @@ public class FileSystemOAICatalog extends AbstractCatalog {
 	    /*****************************************************************
 	     * Construct the resumptionToken String however you see fit.
 	     *****************************************************************/
-	    StringBuffer resumptionTokenSb = new StringBuffer();
+	    StringBuilder resumptionTokenSb = new StringBuilder();
 	    resumptionTokenSb.append(resumptionId);
 	    resumptionTokenSb.append(":");
 	    resumptionTokenSb.append(Integer.toString(oldCount + count));
@@ -632,7 +623,7 @@ public class FileSystemOAICatalog extends AbstractCatalog {
 
     public Map listSets() throws NoSetHierarchyException {
 	throw new NoSetHierarchyException();
-//         Map listSetsMap = new HashMap();
+//         Map<String, Object> listSetsMap = new HashMap<String, Object>();
 //         listSetsMap.put("sets", setsList.iterator());
 //         return listSetsMap;
     }
@@ -654,7 +645,7 @@ public class FileSystemOAICatalog extends AbstractCatalog {
      * Purge tokens that are older than the time-to-live.
      */
     private void purge() {
-        ArrayList old = new ArrayList();
+        List<String> old = new ArrayList<String>();
         Date      then, now = new Date();
         Iterator  keySet = resumptionResults.keySet().iterator();
         String    key;

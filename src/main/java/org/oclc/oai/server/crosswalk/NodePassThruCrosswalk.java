@@ -12,6 +12,7 @@ package org.oclc.oai.server.crosswalk;
 
 import java.io.StringWriter;
 import java.util.HashMap;
+import java.util.Map;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -75,7 +76,7 @@ public class NodePassThruCrosswalk extends Crosswalk {
      */
     public String createMetadata(Object nativeItem) {
 	try {
-	    HashMap hashMap = (HashMap)nativeItem;
+	    Map<String, Object> hashMap = (HashMap)nativeItem;
 	    Element dataNode = (Element)hashMap.get("metadata");
 	    DOMSource source = new DOMSource(dataNode);
 	    StringWriter sw = new StringWriter();
@@ -90,7 +91,7 @@ public class NodePassThruCrosswalk extends Crosswalk {
 	    return e.getMessage();
 	}
 // 	MessageElement[] messageElement = stringOrXmlFragment.get_any();
-// 	StringBuffer sb = new StringBuffer();
+// 	StringBuilder sb = new StringBuilder();
 // 	for (int i=0; i<messageElement.length; ++i) {
 // 	    sb.append(messageElement[i].toString());
 // 	}

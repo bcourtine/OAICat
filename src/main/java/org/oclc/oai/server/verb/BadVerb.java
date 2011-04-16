@@ -42,7 +42,7 @@ public class BadVerb extends ServerVerb {
         throws TransformerException {
         Properties properties =
 	    (Properties)context.get("OAIHandler.properties");
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>");
 	String styleSheet = properties.getProperty("OAIHandler.styleSheet");
 	if (styleSheet != null) {

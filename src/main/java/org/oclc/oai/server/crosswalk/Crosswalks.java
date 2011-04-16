@@ -29,7 +29,7 @@ public class Crosswalks {
     private static final boolean debug = false;
 
     // map of metadataPrefix/CrosswalkItem
-    private Map crosswalksMap = new HashMap();
+    private Map<String, CrosswalkItem> crosswalksMap = new HashMap<String, CrosswalkItem>();
 
     /**
      * Find out which metadataFormats this repository supports and create
@@ -41,29 +41,29 @@ public class Crosswalks {
         String propertyPrefix = "Crosswalks.";
         Enumeration propNames = properties.propertyNames();
         while (propNames.hasMoreElements()) {
-            String propertyName = (String)propNames.nextElement();
+            String propertyName = (String) propNames.nextElement();
             if (propertyName.startsWith(propertyPrefix)) {
                 String schemaLabel = propertyName.substring(propertyPrefix.length());
-		String formatClassName = (String)properties.get(propertyName);
-		try {
-		    Class crosswalkClass = Class.forName(formatClassName);
-		    Crosswalk crosswalk = null;
-		    try {
-			Constructor crosswalkConstructor = crosswalkClass.getConstructor(new Class[] {String.class, Properties.class});
-			crosswalk = (Crosswalk)crosswalkConstructor.newInstance(new Object[] {schemaLabel, properties});
-		    } catch (NoSuchMethodException e) {
-			Constructor crosswalkConstructor = crosswalkClass.getConstructor(new Class[] {Properties.class});
-			crosswalk = (Crosswalk)crosswalkConstructor.newInstance(new Object[] {properties});
-		    }
-		    CrosswalkItem crosswalkItem = new CrosswalkItem(schemaLabel, crosswalk.getSchemaURL(), crosswalk.getNamespaceURL(), crosswalk);
-		    crosswalksMap.put(schemaLabel, crosswalkItem);
+                String formatClassName = (String) properties.get(propertyName);
+                try {
+                    Class crosswalkClass = Class.forName(formatClassName);
+                    Crosswalk crosswalk = null;
+                    try {
+                        Constructor crosswalkConstructor = crosswalkClass.getConstructor(new Class[]{String.class, Properties.class});
+                        crosswalk = (Crosswalk) crosswalkConstructor.newInstance(new Object[]{schemaLabel, properties});
+                    } catch (NoSuchMethodException e) {
+                        Constructor crosswalkConstructor = crosswalkClass.getConstructor(new Class[]{Properties.class});
+                        crosswalk = (Crosswalk) crosswalkConstructor.newInstance(new Object[]{properties});
+                    }
+                    CrosswalkItem crosswalkItem = new CrosswalkItem(schemaLabel, crosswalk.getSchemaURL(), crosswalk.getNamespaceURL(), crosswalk);
+                    crosswalksMap.put(schemaLabel, crosswalkItem);
                     if (debug) {
                         System.out.println("Crosswalks.Crosswalks: " + schemaLabel + "=" + crosswalk);
                     }
-		} catch (Exception e) {
-		    System.err.println("Crosswalks: couldn't construct: " + formatClassName);
-		    e.printStackTrace();
-		}
+                } catch (Exception e) {
+                    System.err.println("Crosswalks: couldn't construct: " + formatClassName);
+                    e.printStackTrace();
+                }
             }
         }
         if (crosswalksMap.size() == 0) {
@@ -72,29 +72,29 @@ public class Crosswalks {
     }
 
     public Crosswalks(Map crosswalkItemMap) {
-	Iterator iter = crosswalkItemMap.values().iterator();
-	while (iter.hasNext()) {
-	    CrosswalkItem crosswalkItem = (CrosswalkItem)iter.next();
-	    String schemaLabel = crosswalkItem.getMetadataPrefix();
+        Iterator iter = crosswalkItemMap.values().iterator();
+        while (iter.hasNext()) {
+            CrosswalkItem crosswalkItem = (CrosswalkItem) iter.next();
+            String schemaLabel = crosswalkItem.getMetadataPrefix();
 // 	    Crosswalk crosswalk = crosswalkItem.getCrosswalk();
-	    crosswalksMap.put(schemaLabel, crosswalkItem);
-	}
-	
-	if (crosswalksMap.size() == 0) {
+            crosswalksMap.put(schemaLabel, crosswalkItem);
+        }
+
+        if (crosswalksMap.size() == 0) {
             System.err.println("Crosswalks entries are missing from properties file");
-	}
+        }
     }
 
     public String toString() {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         Iterator iterator = iterator();
         while (iterator.hasNext()) {
-            Map.Entry entry = (Map.Entry)iterator.next();
+            Map.Entry entry = (Map.Entry) iterator.next();
             sb.append(entry.getKey());
-	    sb.append("=");
-	    CrosswalkItem crosswalkItem = (CrosswalkItem)entry.getValue();
-	    sb.append(crosswalkItem.getCrosswalk().toString());
-	    sb.append("\n");
+            sb.append("=");
+            CrosswalkItem crosswalkItem = (CrosswalkItem) entry.getValue();
+            sb.append(crosswalkItem.getCrosswalk().toString());
+            sb.append("\n");
         }
         return sb.toString();
     }
@@ -107,19 +107,18 @@ public class Crosswalks {
      * @return a String containing the metadataPrefix value associated with this pair
      */
     public String getMetadataPrefix(String namespaceURI, String schemaURL) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         if (namespaceURI != null) {
-        	sb.append(namespaceURI);
+            sb.append(namespaceURI);
         }
-        sb.append(" ")
-        .append(schemaURL);
-	Iterator iterator = crosswalksMap.entrySet().iterator();
-	while (iterator.hasNext()) {
-	    Map.Entry entry = (Map.Entry)iterator.next();
-	    if (((CrosswalkItem)entry.getValue()).getCrosswalk().getSchemaLocation().equals(sb.toString())) {
-		return (String)entry.getKey();
-	    }
-	}
+        sb.append(" ").append(schemaURL);
+        Iterator iterator = crosswalksMap.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry entry = (Map.Entry) iterator.next();
+            if (((CrosswalkItem) entry.getValue()).getCrosswalk().getSchemaLocation().equals(sb.toString())) {
+                return (String) entry.getKey();
+            }
+        }
         return null;
     }
 
@@ -133,13 +132,13 @@ public class Crosswalks {
         String schemaLocation = getSchemaLocation(metadataPrefix);
         StringTokenizer tokenizer = new StringTokenizer(schemaLocation);
         String temp = tokenizer.nextToken();
-	try {
-	    return tokenizer.nextToken();
-	} catch (NoSuchElementException e) {
-	    return temp;
-	}
+        try {
+            return tokenizer.nextToken();
+        } catch (NoSuchElementException e) {
+            return temp;
+        }
     }
-    
+
     /**
      * Get the namespaceURI associated with the specified metadataPrefix
      *
@@ -153,14 +152,14 @@ public class Crosswalks {
     }
 
     public String getNativeRecordSchema(String metadataPrefix) {
-	CrosswalkItem crosswalkItem = (CrosswalkItem)crosswalksMap.get(metadataPrefix);
-	if (crosswalkItem == null) {
-	    return null;
-	} else {
-	    return crosswalkItem.getNativeRecordSchema();
-	}
+        CrosswalkItem crosswalkItem = crosswalksMap.get(metadataPrefix);
+        if (crosswalkItem == null) {
+            return null;
+        } else {
+            return crosswalkItem.getNativeRecordSchema();
+        }
     }
-    
+
     /**
      * Get the namespaceURI/schemaURL associated with the specified metadataPrefix
      *
@@ -168,11 +167,12 @@ public class Crosswalks {
      * @return a String containing the namespaceURI/schemaURL associated with the metadataPrefix
      */
     public String getSchemaLocation(String metadataPrefix) {
-	CrosswalkItem crosswalkItem = (CrosswalkItem)crosswalksMap.get(metadataPrefix);
-	if (crosswalkItem != null)
-	    return crosswalkItem.getCrosswalk().getSchemaLocation();
-	else
-	    return null;
+        CrosswalkItem crosswalkItem = crosswalksMap.get(metadataPrefix);
+        if (crosswalkItem != null) {
+            return crosswalkItem.getCrosswalk().getSchemaLocation();
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -182,11 +182,12 @@ public class Crosswalks {
      * @return a String containing the namespaceURI/schemaURL associated with the metadataPrefix
      */
     public String getContentType(String metadataPrefix) {
-	CrosswalkItem crosswalkItem = (CrosswalkItem)crosswalksMap.get(metadataPrefix);
-	if (crosswalkItem != null)
-	    return crosswalkItem.getCrosswalk().getContentType();
-	else
-	    return null;
+        CrosswalkItem crosswalkItem = crosswalksMap.get(metadataPrefix);
+        if (crosswalkItem != null) {
+            return crosswalkItem.getCrosswalk().getContentType();
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -196,19 +197,21 @@ public class Crosswalks {
      * @return a String containing the DOCTYPE associated with the metadataPrefix
      */
     public String getDocType(String metadataPrefix) {
-	CrosswalkItem crosswalkItem = (CrosswalkItem)crosswalksMap.get(metadataPrefix);
-	if (crosswalkItem != null)
-	    return crosswalkItem.getCrosswalk().getDocType();
-	else
-	    return null;
+        CrosswalkItem crosswalkItem = crosswalksMap.get(metadataPrefix);
+        if (crosswalkItem != null) {
+            return crosswalkItem.getCrosswalk().getDocType();
+        } else {
+            return null;
+        }
     }
 
     public String getEncoding(String metadataPrefix) {
-	CrosswalkItem crosswalkItem = (CrosswalkItem)crosswalksMap.get(metadataPrefix);
-	if (crosswalkItem != null)
-	    return crosswalkItem.getCrosswalk().getEncoding();
-	else
-	    return null;
+        CrosswalkItem crosswalkItem = crosswalksMap.get(metadataPrefix);
+        if (crosswalkItem != null) {
+            return crosswalkItem.getCrosswalk().getEncoding();
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -226,7 +229,7 @@ public class Crosswalks {
      *
      * @return an Iterator containing Map.Entry's for each supported format.
      */
-    public Iterator iterator() {
- 	return crosswalksMap.entrySet().iterator();
+    public Iterator<Map.Entry<String, CrosswalkItem>> iterator() {
+        return crosswalksMap.entrySet().iterator();
     }
 }

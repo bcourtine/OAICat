@@ -49,7 +49,7 @@ public class OAIUtil {
      * @return the String with &amp;, &lt;, and &gt; encoded for use in XML.
      */
     public static String xmlEncode(String s) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
 
         for (int i=0; i<s.length(); ++i) {
             char c = s.charAt(i);
@@ -83,7 +83,7 @@ public class OAIUtil {
      * @return  an LCCN String in MARC display format (e.g. 'n2001-50268').
      */
     public static String toLCCNDisplay(String packedLCCN) {
-	StringBuffer sb = new StringBuffer();
+	StringBuilder sb = new StringBuilder();
 	if (Character.isDigit(packedLCCN.charAt(2))) {
 	    sb.append(packedLCCN.substring(0, 2).trim());
 	    sb.append(packedLCCN.substring(2, 6));

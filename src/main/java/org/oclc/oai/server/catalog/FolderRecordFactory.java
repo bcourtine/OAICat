@@ -10,10 +10,7 @@
  */
 package org.oclc.oai.server.catalog;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Properties;
-import java.util.StringTokenizer;
+import java.util.*;
 
 import javax.xml.transform.TransformerException;
 
@@ -79,7 +76,7 @@ public class FolderRecordFactory extends RecordFactory {
         } catch (TransformerException e) {
             return e.getMessage();
         }
-//	StringBuffer sb = new StringBuffer();
+//	StringBuilder sb = new StringBuilder();
 //	sb.append("oai:");
 //	sb.append(repositoryIdentifier);
 //	sb.append(":");
@@ -125,7 +122,7 @@ public class FolderRecordFactory extends RecordFactory {
      */
     public Iterator getSetSpecs(Object nativeItem)
 	throws IllegalArgumentException  {
-        ArrayList list = new ArrayList();
+        List<String> list = new ArrayList<String>();
         Document doc = (Document) nativeItem;
         try {
             NodeIterator iter = XPathAPI.selectNodeIterator(doc, "/record/header/setSpec");

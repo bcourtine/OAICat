@@ -74,7 +74,7 @@ public class GettyFileRecordFactory extends RecordFactory {
      * @return OAI identifier
      */
     public String getOAIIdentifier(Object nativeItem) {
-	StringBuffer sb = new StringBuffer();
+	StringBuilder sb = new StringBuilder();
 	sb.append(getLocalIdentifier(nativeItem));
 	return sb.toString();
     }
