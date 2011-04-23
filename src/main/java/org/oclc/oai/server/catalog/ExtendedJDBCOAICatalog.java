@@ -259,12 +259,14 @@ public class ExtendedJDBCOAICatalog extends AbstractCatalog {
              * (which is the responsibility of the RecordFactory implementation).
              */
             if (!rs.next()) {
+                stmt.close();
                 endConnection(con);
                 throw new IdDoesNotExistException(oaiIdentifier);
             } else {
                 // Make sure the identifierQuery returns the columns you need (if any) to determine the supported schemaLocations for this item
                 Map<String, Object> nativeItem = new HashMap<String, Object>();
                 nativeItem.put("coreResult", getColumnValues(rs));
+                stmt.close();
                 endConnection(con);
                 return getRecordFactory().getSchemaLocations(nativeItem);
             }
@@ -562,6 +564,7 @@ public class ExtendedJDBCOAICatalog extends AbstractCatalog {
             }
 
             if (count == 0) {
+                stmt.close();
                 endConnection(con);
                 throw new NoItemsMatchException();
             }
@@ -594,8 +597,10 @@ public class ExtendedJDBCOAICatalog extends AbstractCatalog {
                  * line after it that I've commented out.
                  *****************************************************************/
                 listIdentifiersMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(), -1, 0));
-                endConnection(con);
+                // listIdentifiersMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString()));
             }
+            stmt.close();
+            endConnection(con);
         } catch (SQLException e) {
             if (con != null) {
                 endConnection(con);
@@ -705,9 +710,10 @@ public class ExtendedJDBCOAICatalog extends AbstractCatalog {
                  * line after it that I've commented out.
                  *****************************************************************/
                 listIdentifiersMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(), -1, oldCount));
-
-                endConnection(con);
+                // listIdentifiersMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString()));
             }
+            stmt.close();
+            endConnection(con);
         } catch (UnsupportedEncodingException e) {
             if (con != null) {
                 endConnection(con);
@@ -752,6 +758,7 @@ public class ExtendedJDBCOAICatalog extends AbstractCatalog {
             Map<String, Object> nativeItem = new HashMap<String, Object>();
             nativeItem.put("coreResult", getColumnValues(rs));
             extendItem(con, nativeItem);
+            stmt.close();
             endConnection(con);
             return constructRecord(nativeItem, metadataPrefix);
         } catch (SQLException e) {
@@ -839,9 +846,10 @@ public class ExtendedJDBCOAICatalog extends AbstractCatalog {
                  * line after it that I've commented out.
                  *****************************************************************/
                 listRecordsMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(), -1, 0));
-
-                endConnection(con);
+                // listRecordsMap.put("resumptionMap", getResumptionMap(resumptionTokenSbSb.toString()));
             }
+            stmt.close();
+            endConnection(con);
         } catch (UnsupportedEncodingException e) {
             if (con != null) {
                 endConnection(con);
@@ -960,8 +968,9 @@ public class ExtendedJDBCOAICatalog extends AbstractCatalog {
                         oldCount));
                 //          listRecordsMap.put("resumptionMap",
                 //                                 getResumptionMap(resumptionTokenSb.toString()));
-                endConnection(con);
             }
+            stmt.close();
+            endConnection(con);
         } catch (UnsupportedEncodingException e) {
             if (con != null) {
                 endConnection(con);
@@ -1063,8 +1072,10 @@ public class ExtendedJDBCOAICatalog extends AbstractCatalog {
                      * line after it that I've commented out.
                      *****************************************************************/
                     listSetsMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString(), numRows, 0));
-                    endConnection(con);
+                    // listSetsMap.put("resumptionMap", getResumptionMap(resumptionTokenSb.toString()));
                 }
+                stmt.close();
+                endConnection(con);
             } catch (SQLException e) {
                 if (con != null) {
                     endConnection(con);
@@ -1179,6 +1190,7 @@ public class ExtendedJDBCOAICatalog extends AbstractCatalog {
                     Map<String, Object> setMap = getColumnValues(rs);
                     setSpecs.add(setMap.get(setSpecItemLabel).toString());
                 }
+                stmt.close();
                 endConnection(con);
             }
             return setSpecs.iterator();
@@ -1210,6 +1222,7 @@ public class ExtendedJDBCOAICatalog extends AbstractCatalog {
                     Map<String, Object> aboutMap = getColumnValues(rs);
                     abouts.add((String) aboutMap.get(aboutValueLabel));
                 }
+                stmt.close();
                 endConnection(con);
             }
             return abouts.iterator();
@@ -1308,17 +1321,13 @@ public class ExtendedJDBCOAICatalog extends AbstractCatalog {
     private void purge() {
         List<String> old = new ArrayList<String>();
         Date now = new Date();
-        Iterator keySet = resumptionResults.keySet().iterator();
-        while (keySet.hasNext()) {
-            String key = (String) keySet.next();
+        for (String key : resumptionResults.keySet()) {
             Date then = new Date(Long.parseLong(key) + getMillisecondsToLive());
             if (now.after(then)) {
                 old.add(key);
             }
         }
-        Iterator iterator = old.iterator();
-        while (iterator.hasNext()) {
-            String key = (String) iterator.next();
+        for (String key : old) {
             resumptionResults.remove(key);
         }
     }
